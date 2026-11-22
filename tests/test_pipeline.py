@@ -260,6 +260,19 @@ def test_multi_round_creation_and_persistence():
     assert "Written Prelims Set A" in names
 
 
+def test_api_connection_ping_endpoint():
+    """Verify live API connection diagnostics endpoint returns all 3 service checks."""
+    from backend.main import test_api_connections
+
+    res = _run(test_api_connections())
+    assert len(res["checks"]) == 3
+    services = [c["service"] for c in res["checks"]]
+    assert any("Gemini" in s for s in services)
+    assert any("Groq" in s for s in services)
+    assert any("Truth Hub" in s for s in services)
+
+
+
 
 
 

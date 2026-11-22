@@ -12,6 +12,7 @@ let CONFIG_STATUS = null;
 let ACTIVE_PRESET_ID = "";
 let CURRENT_ROUND_NAME = "KQA Open Finals — Round 1";
 let IS_SPEAKING_MIC = false;
+let VERSION_SNAPSHOTS = [];
 
 // Playtest simulator state
 let PLAYTEST_STATE = {
@@ -461,6 +462,9 @@ function renderDiagnosticReport(diag, rawQuestion) {
 
   // Render Module 4: Disentangled Archive Deduplication
   renderArchiveDeduplication(diag.archive_dedup);
+
+  // Record Draft Calibration Snapshot
+  recordVersionSnapshot(rawQuestion, diag);
 }
 
 function renderRadarChartSvg(scores) {
@@ -2564,6 +2568,95 @@ async function createNewQuizRound() {
   inp.value = "";
   showToast(`Created & switched to new round "${name}"!`, "success");
   await loadRoundSet();
+}
+
+// ============================================================================
+// DRAFT CALIBRATION SNAPSHOT TIMELINE & LIVE API PING TESTER
+// ============================================================================
+function recordVersionSnapshot(questionText, diag) {
+  const answer = (document.getElementById("input-answer")?.value || "").trim();
+  const last = VERSION_SNAPSHOTS[VERSION_SNAPSHOTS.length - 1];
+  if (last && last.questionText === questionText && last.answer === answer) {
+    return;
+  }
+  const now = new Date();
+  const ts = now.toTimeString().slice(0, 8);
+  VERSION_SNAPSHOTS.push({
+    version: VERSION_SNAPSHOTS.length + 1,
+    timestamp: ts,
+    answer,
+    questionText,
+    score: diag.overall_quality_score,
+    verdict: diag.verdict_badge,
+  });
+  if (VERSION_SNAPSHOTS.length > 8) VERSION_SNAPSHOTS.shift();
+  renderVersionSnapshots();
+}
+
+function renderVersionSnapshots() {
+  const strip = document.getElementById("version-snapshots-strip");
+  const lbl = document.getElementById("snapshot-count-label");
+  if (!strip) return;
+  if (lbl) lbl.textContent = `${VERSION_SNAPSHOTS.length} version${VERSION_SNAPSHOTS.length === 1 ? "" : "s"}`;
+  strip.innerHTML = VERSION_SNAPSHOTS.map((s, idx) => {
+    const scoreCls =
+      s.score >= 80
+        ? "text-emerald-300 border-emerald-700/50 bg-emerald-950/40"
+        : s.score >= 62
+        ? "text-amber-300 border-amber-700/50 bg-amber-950/40"
+        : "text-rose-300 border-rose-700/50 bg-rose-950/40";
+    return `
+      <button onclick="restoreVersionSnapshot(${idx})" title="${escapeHtml(
+      s.answer
+    )} — ${escapeHtml(s.verdict)} (${s.timestamp})" class="px-2 py-1 rounded-lg border font-mono-code text-[10px] hover:brightness-125 transition ${scoreCls}">
+        v${s.version}: <strong>${s.score}</strong> <span class="opacity-70">(${s.timestamp.slice(0, 5)})</span>
+      </button>
+    `;
+  }).join("");
+}
+
+function restoreVersionSnapshot(idx) {
+  const snap = VERSION_SNAPSHOTS[idx];
+  if (!snap) return;
+  document.getElementById("input-question").value = snap.questionText;
+  document.getElementById("input-answer").value = snap.answer;
+  updateWordCount();
+  showToast(`Restored Draft Snapshot v${snap.version} (Score ${snap.score}/100)`, "info");
+  runDiagnosticLinter();
+}
+
+async function testLiveApiConnections() {
+  const btn = document.getElementById("btn-test-connections");
+  const out = document.getElementById("modal-ping-results");
+  if (!out) return;
+  out.classList.remove("hidden");
+  out.innerHTML = `<div class="text-cyan-300">Pinging Google Gemini, Groq Cloud LPU, and the 9-API Federated Truth Hub...</div>`;
+  if (btn) btn.disabled = true;
+
+  try {
+    const res = await fetch("/api/config/test", { method: "POST" });
+    const data = await res.json();
+    out.innerHTML = (data.checks || [])
+      .map((c) => {
+        const ok = c.status === "CONNECTED" || c.status === "ONLINE";
+        const cls = ok
+          ? "text-emerald-300"
+          : c.status === "LOCAL_CACHE_MODE" || c.status === "NOT_CONFIGURED"
+          ? "text-amber-300"
+          : "text-rose-300";
+        return `
+        <div class="flex items-center justify-between font-mono-code text-[11px]">
+          <span class="text-slate-200">${escapeHtml(c.service)}</span>
+          <span class="${cls} font-bold">${escapeHtml(c.status)} (${c.latency_ms}ms)</span>
+        </div>
+      `;
+      })
+      .join("");
+  } catch (e) {
+    out.textContent = "Live connection ping failed.";
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 window.addEventListener("DOMContentLoaded", initApp);

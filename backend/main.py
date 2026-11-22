@@ -83,6 +83,53 @@ async def update_api_keys(payload: KeyUpdatePayload) -> Dict[str, Any]:
     )
 
 
+@app.post("/api/config/test")
+async def test_api_connections() -> Dict[str, Any]:
+    """Ping Gemini, Groq LPU, and the Federated Truth Hub to verify live connectivity and latency."""
+    import asyncio
+    from backend.llm_router import llm_router
+    from backend.truth_hub import truth_hub
+
+    ping_sys = "Reply with JSON: {\"pong\": true}"
+    ping_user = "ping"
+
+    async def _ping_gemini():
+        if not config.gemini_api_key:
+            return {"service": "Google Gemini", "status": "NOT_CONFIGURED", "latency_ms": 0.0}
+        _, lat, ok = await llm_router.call_gemini_json(ping_sys, ping_user, temperature=0.0)
+        return {
+            "service": f"Google Gemini ({config.gemini_model})",
+            "status": "CONNECTED" if ok else "AUTH_OR_NET_ERROR",
+            "latency_ms": lat,
+        }
+
+    async def _ping_groq():
+        if not config.groq_api_key:
+            return {"service": "Groq Cloud LPU", "status": "NOT_CONFIGURED", "latency_ms": 0.0}
+        _, lat, ok = await llm_router.call_groq_json(
+            ping_sys, ping_user, temperature=0.0, model_override=config.groq_model_fast
+        )
+        return {
+            "service": f"Groq LPU ({config.groq_model_fast})",
+            "status": "CONNECTED" if ok else "AUTH_OR_NET_ERROR",
+            "latency_ms": lat,
+        }
+
+    async def _ping_truth_hub():
+        ev, apis, _, lat = await truth_hub.federated_verify_query("Albert Einstein", "Albert Einstein")
+        return {
+            "service": f"Federated Truth Hub ({len(apis)} APIs)",
+            "status": "ONLINE" if truth_hub.is_network_available() else "LOCAL_CACHE_MODE",
+            "evidence_count": len(ev),
+            "latency_ms": lat,
+        }
+
+    gem_res, groq_res, truth_res = await asyncio.gather(
+        _ping_gemini(), _ping_groq(), _ping_truth_hub()
+    )
+    return {"checks": [gem_res, groq_res, truth_res]}
+
+
 @app.get("/api/presets")
 async def get_presets() -> Dict[str, Any]:
     return {
