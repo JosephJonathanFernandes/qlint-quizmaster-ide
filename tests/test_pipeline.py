@@ -248,6 +248,19 @@ def test_fuzzy_prelims_grader_and_wikidata_alias_expander():
     assert verdicts["Team D"] == "REJECT"
 
 
+def test_multi_round_creation_and_persistence():
+    """Verify creating a new named quiz round persists cleanly in SQLite."""
+    from backend.main import create_quiz_round, list_quiz_sets
+
+    created = _run(create_quiz_round({"set_name": "Written Prelims Set A"}))
+    assert created["status"] == "created"
+
+    sets_res = _run(list_quiz_sets())
+    names = [s["set_name"] for s in sets_res["sets"]]
+    assert "Written Prelims Set A" in names
+
+
+
 
 
 

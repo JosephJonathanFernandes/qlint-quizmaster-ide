@@ -10,6 +10,8 @@ let PREVIOUS_SCORE = null;
 let UNDO_QUESTION_TEXT = null;
 let CONFIG_STATUS = null;
 let ACTIVE_PRESET_ID = "";
+let CURRENT_ROUND_NAME = "KQA Open Finals — Round 1";
+let IS_SPEAKING_MIC = false;
 
 // Playtest simulator state
 let PLAYTEST_STATE = {
@@ -257,6 +259,21 @@ function updateWordCount() {
   const sentences = splitSentencesClient(text);
   const pill = document.getElementById("clue-count-pill");
   if (pill) pill.textContent = `${sentences.length} clue${sentences.length === 1 ? "" : "s"}`;
+
+  // Spoken oral cadence / breath-length linter
+  const cadenceBadge = document.getElementById("oral-cadence-badge");
+  if (cadenceBadge && sentences.length > 0) {
+    const maxSentWords = Math.max(...sentences.map((s) => s.split(/\s+/).length));
+    if (maxSentWords > 38) {
+      cadenceBadge.textContent = `⚠ Long Breath (${maxSentWords}w)`;
+      cadenceBadge.className =
+        "text-[10px] font-mono-code px-1.5 py-0.5 rounded bg-amber-950/70 text-amber-300 border border-amber-600/50";
+    } else {
+      cadenceBadge.textContent = `✓ Breath-Safe (max ${maxSentWords}w)`;
+      cadenceBadge.className =
+        "text-[10px] font-mono-code px-1.5 py-0.5 rounded bg-emerald-950/60 text-emerald-300 border border-emerald-700/40";
+    }
+  }
   renderInteractiveCluePills(sentences);
 }
 
@@ -1637,8 +1654,15 @@ async function saveApiKeys() {
 async function loadRoundSet() {
   const container = document.getElementById("set-builder-container");
   if (!container) return;
+  await refreshRoundSelector();
+  const enc = encodeURIComponent(CURRENT_ROUND_NAME);
+  const prelimsLink = document.getElementById("link-export-prelims");
+  const slidesLink = document.getElementById("link-export-slides");
+  if (prelimsLink) prelimsLink.href = `/api/sets/export/prelims?set_name=${enc}`;
+  if (slidesLink) slidesLink.href = `/api/sets/export/slides?set_name=${enc}`;
+
   try {
-    const res = await fetch("/api/sets");
+    const res = await fetch(`/api/sets?set_name=${enc}`);
     const data = await res.json();
 
     const spoilersHtml =
@@ -1799,10 +1823,12 @@ async function batchLintEntireRound() {
     btn.innerHTML = `<span class="animate-spin inline-block w-3.5 h-3.5 border-2 border-emerald-300 border-t-transparent rounded-full"></span><span>Linting All Qs...</span>`;
   }
   try {
-    const res = await fetch("/api/sets/lint-all", { method: "POST" });
+    const res = await fetch(`/api/sets/lint-all?set_name=${encodeURIComponent(CURRENT_ROUND_NAME)}`, {
+      method: "POST",
+    });
     const data = await res.json();
     showToast(
-      `Batch-linted all ${data.total_questions} questions! Round Avg: ${data.avg_quality_score}/100.`,
+      `Batch-linted all ${data.total_questions} questions in "${CURRENT_ROUND_NAME}"! Round Avg: ${data.avg_quality_score}/100.`,
       "success"
     );
     await loadRoundSet();
@@ -1818,7 +1844,7 @@ async function batchLintEntireRound() {
 
 async function downloadRoundMarkdownReport() {
   try {
-    const res = await fetch("/api/sets/export/report");
+    const res = await fetch(`/api/sets/export/report?set_name=${encodeURIComponent(CURRENT_ROUND_NAME)}`);
     const data = await res.json();
     const blob = new Blob([data.markdown || ""], { type: "text/markdown" });
     const url = URL.createObjectURL(blob);
@@ -1846,7 +1872,7 @@ async function addCurrentToRoundSet() {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      set_name: "KQA Open Finals — Round 1",
+      set_name: CURRENT_ROUND_NAME,
       question_text,
       target_answer,
       category,
@@ -1856,7 +1882,7 @@ async function addCurrentToRoundSet() {
       funda_notes: LAST_DIAGNOSTIC?.executive_summary || "",
     }),
   });
-  showToast(`Added "${target_answer}" to Round Set Builder & ran cross-spoiler scan!`, "success");
+  showToast(`Added "${target_answer}" to "${CURRENT_ROUND_NAME}" & ran cross-spoiler scan!`, "success");
   loadRoundSet();
 }
 
@@ -2464,6 +2490,80 @@ async function runPrelimsBatchGrader() {
     </div>
   `;
   showToast(`Graded ${data.total_submissions} prelims responses (${data.pass_rate_pct}% pass rate)!`, "success");
+}
+
+// ============================================================================
+// STAGE MIC READ-ALOUD (WEB SPEECH API) & MULTI-ROUND SWITCHER
+// ============================================================================
+function toggleSpeechPreview() {
+  const btn = document.getElementById("btn-mic-preview");
+  if (!("speechSynthesis" in window)) {
+    showToast("Web Speech API is not supported in this browser.", "warning");
+    return;
+  }
+  if (IS_SPEAKING_MIC) {
+    window.speechSynthesis.cancel();
+    IS_SPEAKING_MIC = false;
+    if (btn) btn.textContent = "🔊 Mic Test";
+    return;
+  }
+  const text = (document.getElementById("input-question")?.value || "").trim();
+  if (!text) return;
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.rate = 0.96;
+  utter.onend = () => {
+    IS_SPEAKING_MIC = false;
+    if (btn) btn.textContent = "🔊 Mic Test";
+  };
+  IS_SPEAKING_MIC = true;
+  if (btn) btn.textContent = "⏹ Stop Mic";
+  window.speechSynthesis.speak(utter);
+}
+
+async function refreshRoundSelector() {
+  const sel = document.getElementById("round-selector-dropdown");
+  if (!sel) return;
+  try {
+    const res = await fetch("/api/sets/list");
+    const data = await res.json();
+    const sets = data.sets || [];
+    sel.innerHTML = sets
+      .map(
+        (s) =>
+          `<option value="${escapeHtml(s.set_name)}" ${
+            s.set_name === CURRENT_ROUND_NAME ? "selected" : ""
+          }>${escapeHtml(s.set_name)} (${s.count} Qs)</option>`
+      )
+      .join("");
+  } catch (e) {
+    console.error("Failed to list rounds:", e);
+  }
+}
+
+function switchActiveRound(roundName) {
+  if (!roundName) return;
+  CURRENT_ROUND_NAME = roundName;
+  showToast(`Switched active round to "${CURRENT_ROUND_NAME}"`, "info");
+  loadRoundSet();
+}
+
+async function createNewQuizRound() {
+  const inp = document.getElementById("new-round-name-input");
+  const name = (inp?.value || "").trim();
+  if (!name) {
+    showToast("Enter a name for the new quiz round.", "warning");
+    return;
+  }
+  await fetch("/api/sets/create", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ set_name: name }),
+  });
+  CURRENT_ROUND_NAME = name;
+  inp.value = "";
+  showToast(`Created & switched to new round "${name}"!`, "success");
+  await loadRoundSet();
 }
 
 window.addEventListener("DOMContentLoaded", initApp);

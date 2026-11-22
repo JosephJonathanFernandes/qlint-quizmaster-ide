@@ -119,6 +119,9 @@
                 <h2 class="text-xs font-bold uppercase tracking-wider text-slate-200">Setter Question Compiler</h2>
               </div>
               <div class="flex items-center gap-1.5">
+                <button id="btn-mic-preview" onclick="toggleSpeechPreview()" title="Listen to how this question sounds read aloud on a stage mic" class="px-2 py-1 rounded-md bg-cyan-950/70 hover:bg-cyan-900 text-[11px] text-cyan-200 border border-cyan-700/50 transition">
+                  🔊 Mic Test
+                </button>
                 <button onclick="openSlidePreviewModal()" class="px-2 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-[11px] text-indigo-300 border border-slate-700 transition">
                   🎬 Stage Slide
                 </button>
@@ -162,6 +165,7 @@
                   <span class="text-[10px] font-mono-code px-1.5 py-0.5 rounded bg-slate-800 text-cyan-300" id="clue-count-pill">3 clues</span>
                 </label>
                 <div class="flex items-center gap-2">
+                  <span id="oral-cadence-badge" class="text-[10px] font-mono-code px-1.5 py-0.5 rounded bg-emerald-950/60 text-emerald-300 border border-emerald-700/40">Breath-Safe</span>
                   <span id="reading-time-badge" class="text-[11px] font-mono-code text-slate-400">~15s read</span>
                   <span id="word-count-badge" class="text-[11px] font-mono-code text-slate-400">0 words</span>
                 </div>
@@ -634,7 +638,7 @@
             <button onclick="downloadRoundMarkdownReport()" class="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition">
               📄 Audit (.md)
             </button>
-            <a href="/api/sets/export/prelims" target="_blank" class="px-3.5 py-2.5 rounded-xl bg-purple-950/70 hover:bg-purple-900/80 text-purple-200 border border-purple-700/50 text-xs font-bold transition flex items-center gap-1.5">
+            <a id="link-export-prelims" href="/api/sets/export/prelims" target="_blank" class="px-3.5 py-2.5 rounded-xl bg-purple-950/70 hover:bg-purple-900/80 text-purple-200 border border-purple-700/50 text-xs font-bold transition flex items-center gap-1.5">
               <span>🖨</span><span>Printable Prelims PDF ↗</span>
             </a>
             <button onclick="togglePrelimsGrader()" class="px-3.5 py-2.5 rounded-xl bg-cyan-950/70 hover:bg-cyan-900/80 text-cyan-200 border border-cyan-700/50 text-xs font-bold transition">
@@ -643,9 +647,25 @@
             <button onclick="toggleHostConsole()" id="btn-toggle-host-console" class="px-3.5 py-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 text-xs font-bold transition flex items-center gap-1.5">
               <span>🏆</span><span>Host Scoreboard</span>
             </button>
-            <a href="/api/sets/export/slides" target="_blank" class="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white text-xs font-bold shadow-lg transition flex items-center gap-1.5">
+            <a id="link-export-slides" href="/api/sets/export/slides" target="_blank" class="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white text-xs font-bold shadow-lg transition flex items-center gap-1.5">
               <span>🎬</span><span>Projector Deck ↗</span>
             </a>
+          </div>
+        </div>
+
+        <!-- MULTI-ROUND SWITCHER & CREATOR BAR -->
+        <div class="mt-4 flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-slate-950/80 border border-slate-800/90">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-semibold text-slate-300">Active Round:</span>
+            <select id="round-selector-dropdown" onchange="switchActiveRound(this.value)" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs font-semibold text-white focus:border-indigo-500 focus:outline-none">
+              <option value="KQA Open Finals — Round 1">KQA Open Finals — Round 1</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-2">
+            <input id="new-round-name-input" type="text" placeholder="New round name (e.g. Written Prelims Set A)..." class="w-64 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:border-indigo-500 focus:outline-none" />
+            <button onclick="createNewQuizRound()" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white transition">
+              + Create Round
+            </button>
           </div>
         </div>
 

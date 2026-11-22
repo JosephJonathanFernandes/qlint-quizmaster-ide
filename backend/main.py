@@ -172,6 +172,11 @@ async def list_quiz_sets() -> Dict[str, Any]:
     return {"sets": set_manager.list_sets()}
 
 
+@app.post("/api/sets/create")
+async def create_quiz_round(payload: Dict[str, Any]) -> Dict[str, Any]:
+    return set_manager.create_round(str(payload.get("set_name", "")))
+
+
 @app.get("/api/sets")
 async def get_quiz_set(set_name: str = "KQA Open Finals — Round 1") -> Dict[str, Any]:
     return set_manager.analyze_set(set_name=set_name)

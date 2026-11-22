@@ -68,6 +68,17 @@ class QuizSetManager:
         with sqlite3.connect(self.db_path) as conn:
             conn.execute(
                 """
+                CREATE TABLE IF NOT EXISTS quiz_rounds (
+                    set_name TEXT PRIMARY KEY
+                )
+                """
+            )
+            conn.execute(
+                "INSERT OR IGNORE INTO quiz_rounds (set_name) VALUES (?)",
+                ("KQA Open Finals — Round 1",),
+            )
+            conn.execute(
+                """
                 CREATE TABLE IF NOT EXISTS set_questions (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     set_name TEXT NOT NULL,
@@ -114,15 +125,27 @@ class QuizSetManager:
             ).fetchall()
         return [dict(r) for r in rows]
 
+    def create_round(self, set_name: str) -> Dict[str, Any]:
+        clean = (set_name or "").strip()
+        if not clean:
+            return {"status": "error", "set_name": ""}
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("INSERT OR IGNORE INTO quiz_rounds (set_name) VALUES (?)", (clean,))
+            conn.commit()
+        return {"status": "created", "set_name": clean}
+
     def list_sets(self) -> List[Dict[str, Any]]:
         with sqlite3.connect(self.db_path) as conn:
             conn.row_factory = sqlite3.Row
             rows = conn.execute(
                 """
-                SELECT set_name, COUNT(*) AS count, ROUND(AVG(quality_score), 1) AS avg_quality
-                FROM set_questions
-                GROUP BY set_name
-                ORDER BY set_name ASC
+                SELECT r.set_name,
+                       COUNT(q.id) AS count,
+                       COALESCE(ROUND(AVG(q.quality_score), 1), 0) AS avg_quality
+                FROM quiz_rounds r
+                LEFT JOIN set_questions q ON r.set_name = q.set_name
+                GROUP BY r.set_name
+                ORDER BY r.set_name ASC
                 """
             ).fetchall()
         result = [dict(r) for r in rows]
@@ -133,6 +156,7 @@ class QuizSetManager:
     def add_question_to_set(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         set_name = payload.get("set_name") or "KQA Open Finals — Round 1"
         with sqlite3.connect(self.db_path) as conn:
+            conn.execute("INSERT OR IGNORE INTO quiz_rounds (set_name) VALUES (?)", (set_name,))
             cur = conn.execute(
                 "SELECT COALESCE(MAX(position), 0) FROM set_questions WHERE set_name = ?",
                 (set_name,),
