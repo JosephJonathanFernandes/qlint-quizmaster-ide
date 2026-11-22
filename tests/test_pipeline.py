@@ -221,6 +221,34 @@ def test_printable_prelims_and_multi_round_listing():
     assert "Stanley Kubrick" in qm_key.body.decode("utf-8")
 
 
+def test_fuzzy_prelims_grader_and_wikidata_alias_expander():
+    """Verify Wikidata Auto-Alias Expansion and Fuzzy Written Prelims Sheet Grading."""
+    from backend.answer_grader import expand_entity_aliases, batch_grade_prelims_answers
+
+    alias_res = _run(expand_entity_aliases("Mary Shelley"))
+    assert any("Mary Godwin" in a for a in alias_res["aliases"])
+
+    sheet = (
+        "Team A: Mary Shelley\n"
+        "Team B: Mary Shelly\n"
+        "Team C: Mary Godwin\n"
+        "Team D: Bram Stoker"
+    )
+    graded = batch_grade_prelims_answers(
+        target_answer="Mary Shelley",
+        acceptable_aliases=alias_res["aliases"],
+        submissions_text=sheet,
+    )
+    assert graded["total_submissions"] == 4
+    assert graded["accepted_count"] == 3
+    verdicts = {r["team"]: r["verdict"] for r in graded["results"]}
+    assert verdicts["Team A"] == "ACCEPT"
+    assert verdicts["Team B"] == "ACCEPT_FUZZY"
+    assert verdicts["Team C"] == "ACCEPT"
+    assert verdicts["Team D"] == "REJECT"
+
+
+
 
 
 

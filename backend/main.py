@@ -30,6 +30,7 @@ from backend.archive_engine import archive_engine
 from backend.set_manager import set_manager
 from backend.funda_miner import mine_quiz_angles
 from backend.visual_linter import lint_visual_clue
+from backend.answer_grader import batch_grade_prelims_answers, expand_entity_aliases
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
@@ -122,6 +123,20 @@ async def lint_visual_endpoint(payload: Dict[str, Any]) -> Dict[str, Any]:
         target_answer=str(payload.get("target_answer", "")),
         aliases=payload.get("aliases", []),
         question_context=str(payload.get("question_context", "")),
+    )
+
+
+@app.post("/api/aliases/expand")
+async def expand_aliases_endpoint(payload: Dict[str, Any]) -> Dict[str, Any]:
+    return await expand_entity_aliases(str(payload.get("target_answer", "")))
+
+
+@app.post("/api/grade-prelims")
+async def grade_prelims_endpoint(payload: Dict[str, Any]) -> Dict[str, Any]:
+    return batch_grade_prelims_answers(
+        target_answer=str(payload.get("target_answer", "")),
+        acceptable_aliases=payload.get("acceptable_aliases", []),
+        submissions_text=str(payload.get("submissions_text", "")),
     )
 
 

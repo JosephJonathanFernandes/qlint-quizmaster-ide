@@ -187,7 +187,12 @@
                 <input id="input-answer" type="text" placeholder="e.g. Mary Shelley" class="w-full bg-slate-950 border border-emerald-600/60 rounded-xl px-3 py-2 text-sm font-bold text-emerald-200 focus:outline-none focus:border-emerald-400" />
               </div>
               <div>
-                <label class="block text-[11px] font-semibold text-slate-400 mb-1">Acceptable Aliases (comma-sep)</label>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="text-[11px] font-semibold text-slate-400">Acceptable Aliases (comma-sep)</label>
+                  <button onclick="autoFillWikidataAliases()" title="Auto-populate aliases from Wikidata Knowledge Graph" class="text-[10px] font-semibold text-cyan-400 hover:text-cyan-300">
+                    ✨ Auto-Fill
+                  </button>
+                </div>
                 <input id="input-aliases" type="text" placeholder="e.g. Mary Godwin, Wollstonecraft" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-indigo-500" />
               </div>
             </div>
@@ -632,6 +637,9 @@
             <a href="/api/sets/export/prelims" target="_blank" class="px-3.5 py-2.5 rounded-xl bg-purple-950/70 hover:bg-purple-900/80 text-purple-200 border border-purple-700/50 text-xs font-bold transition flex items-center gap-1.5">
               <span>🖨</span><span>Printable Prelims PDF ↗</span>
             </a>
+            <button onclick="togglePrelimsGrader()" class="px-3.5 py-2.5 rounded-xl bg-cyan-950/70 hover:bg-cyan-900/80 text-cyan-200 border border-cyan-700/50 text-xs font-bold transition">
+              📝 Fuzzy Sheet Grader
+            </button>
             <button onclick="toggleHostConsole()" id="btn-toggle-host-console" class="px-3.5 py-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 text-xs font-bold transition flex items-center gap-1.5">
               <span>🏆</span><span>Host Scoreboard</span>
             </button>
@@ -639,6 +647,26 @@
               <span>🎬</span><span>Projector Deck ↗</span>
             </a>
           </div>
+        </div>
+
+        <!-- FUZZY WRITTEN PRELIMS ANSWER SHEET GRADER -->
+        <div id="prelims-grader-panel" class="hidden mt-5 p-5 rounded-2xl bg-slate-950/90 border border-cyan-500/40 animate-fade-in">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div>
+              <h3 class="text-sm font-bold text-cyan-200">📝 Smart Written Prelims Answer Sheet Grader (Fuzzy &amp; Alias Aware)</h3>
+              <p class="text-[11px] text-slate-400">Paste team responses (<code class="text-indigo-300">Team Name: Answer</code>) to auto-grade typos, surnames, and aliases for your active question.</p>
+            </div>
+            <button onclick="loadSamplePrelimsSheet()" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] text-cyan-300 border border-slate-700">
+              Load Sample 6-Team Sheet
+            </button>
+          </div>
+          <textarea id="grader-submissions-input" rows="5" placeholder="Team Alpha: Mary Shelly&#10;Team Beta: Mary Godwin&#10;Team Gamma: Percy Shelley" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl p-3 text-xs font-mono-code text-slate-200 mb-3 focus:border-cyan-500 focus:outline-none"></textarea>
+          <div class="flex justify-end gap-2 mb-3">
+            <button onclick="runPrelimsBatchGrader()" class="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-xs font-bold text-white shadow">
+              ⚡ Auto-Grade Submissions
+            </button>
+          </div>
+          <div id="grader-results-output"></div>
         </div>
 
         <!-- LIVE POUNCE / BOUNCE HOST SCOREBOARD CONSOLE -->

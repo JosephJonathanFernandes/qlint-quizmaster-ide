@@ -2358,4 +2358,112 @@ async function executeVisualLinter(imageB64, filename, mimeType) {
   }
 }
 
+// ============================================================================
+// WIKIDATA AUTO-ALIAS EXPANDER & FUZZY WRITTEN PRELIMS SHEET GRADER
+// ============================================================================
+async function autoFillWikidataAliases() {
+  const target_answer = (document.getElementById("input-answer")?.value || "").trim();
+  if (!target_answer) {
+    showToast("Enter a Target Answer first to expand aliases.", "warning");
+    return;
+  }
+  try {
+    const res = await fetch("/api/aliases/expand", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ target_answer }),
+    });
+    const data = await res.json();
+    if (data.aliases && data.aliases.length > 0) {
+      document.getElementById("input-aliases").value = data.aliases.join(", ");
+      showToast(`Populated ${data.aliases.length} aliases from Wikidata KG!`, "success");
+    } else {
+      showToast("No extra aliases found for this entity.", "info");
+    }
+  } catch (e) {
+    showToast("Alias expansion failed.", "error");
+  }
+}
+
+function togglePrelimsGrader() {
+  const el = document.getElementById("prelims-grader-panel");
+  if (el) el.classList.toggle("hidden");
+}
+
+function loadSamplePrelimsSheet() {
+  const target = (document.getElementById("input-answer")?.value || "Mary Shelley").trim();
+  if (target.toLowerCase().includes("shelley")) {
+    document.getElementById("grader-submissions-input").value =
+      "Team IIT-M: Mary Shelley\n" +
+      "Team NITK: Mary Shelly\n" +
+      "Team RVCE: Mary Godwin\n" +
+      "Team BITS: Shelley\n" +
+      "Team PES: Percy Shelley\n" +
+      "Team BMS: Bram Stoker";
+  } else {
+    document.getElementById("grader-submissions-input").value =
+      `Team Alpha: ${target}\n` +
+      `Team Beta: ${target.slice(0, -1)}\n` +
+      `Team Gamma: ${target.split(" ").pop()}\n` +
+      `Team Delta: Unrelated Guess`;
+  }
+}
+
+async function runPrelimsBatchGrader() {
+  const target_answer = (document.getElementById("input-answer")?.value || "Mary Shelley").trim();
+  const acceptable_aliases = (document.getElementById("input-aliases")?.value || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const submissions_text = (document.getElementById("grader-submissions-input")?.value || "").trim();
+  const out = document.getElementById("grader-results-output");
+  if (!submissions_text) {
+    showToast("Paste team responses first or click 'Load Sample 6-Team Sheet'.", "warning");
+    return;
+  }
+
+  const res = await fetch("/api/grade-prelims", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ target_answer, acceptable_aliases, submissions_text }),
+  });
+  const data = await res.json();
+
+  const badgeMap = {
+    ACCEPT: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
+    ACCEPT_FUZZY: "bg-cyan-500/20 text-cyan-300 border-cyan-500/40",
+    QM_REVIEW: "bg-amber-500/20 text-amber-300 border-amber-500/40",
+    REJECT: "bg-rose-500/20 text-rose-300 border-rose-500/40",
+    BLANK: "bg-slate-800 text-slate-400 border-slate-700",
+  };
+
+  out.innerHTML = `
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5 text-xs font-mono-code">
+      <span class="text-slate-300">Graded <strong class="text-white">${data.total_submissions}</strong> teams against <strong class="text-emerald-300">${escapeHtml(
+        data.target_answer
+      )}</strong></span>
+      <span class="text-emerald-400">Pass Rate: ${data.pass_rate_pct}% (${data.accepted_count} accepted • ${data.qm_review_count} QM review)</span>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+      ${(data.results || [])
+        .map(
+          (r) => `
+        <div class="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col gap-1">
+          <div class="flex items-center justify-between gap-1">
+            <span class="text-xs font-bold text-white">${escapeHtml(r.team)}</span>
+            <span class="px-1.5 py-0.5 rounded text-[10px] font-mono-code border ${
+              badgeMap[r.verdict] || badgeMap.REJECT
+            }">${escapeHtml(r.verdict)}</span>
+          </div>
+          <div class="text-xs font-mono-code text-indigo-300">"${escapeHtml(r.submitted)}"</div>
+          <div class="text-[10px] text-slate-400">${escapeHtml(r.reason)}</div>
+        </div>
+      `
+        )
+        .join("")}
+    </div>
+  `;
+  showToast(`Graded ${data.total_submissions} prelims responses (${data.pass_rate_pct}% pass rate)!`, "success");
+}
+
 window.addEventListener("DOMContentLoaded", initApp);
