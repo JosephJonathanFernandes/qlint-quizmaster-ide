@@ -1043,6 +1043,10 @@ async def run_full_diagnostic_pipeline(
             "Workable core funda, but clue pacing or search resistance can be tightened. Check the Workability Funnel and 1-Hop Search Probes."
         )
 
+    from backend.game_theory import compute_pounce_ev_profile
+
+    pounce_ev = compute_pounce_ev_profile(work_rep.ablation_steps)
+
     style_critique = {
         "target_style": req.quiz_style,
         "play_mode": req.play_mode,
@@ -1053,6 +1057,7 @@ async def run_full_diagnostic_pipeline(
             if len(clues) >= 3
             else "Compact prompt; consider expanding into a 3-part narrative funnel for Pounce + Bounce."
         ),
+        "pounce_ev_analysis": pounce_ev,
     }
 
     total_gem_ms = round(w_gem + u_gem + t_gem, 1)

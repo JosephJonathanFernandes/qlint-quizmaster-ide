@@ -286,6 +286,19 @@ def test_loco_stress_test_and_implicit_linguistic_leak_audit():
     assert "GENDER_PRONOUN_LEAK" in leak_types
 
 
+def test_game_theoretic_pounce_ev_analysis():
+    """Verify Game-Theoretic Pounce EV (+10/-5) breakeven analysis is attached to diagnostics."""
+    preset = PRESET_QUESTIONS[3]  # Well-calibrated Stanley Kubrick question
+    req = QuestionAnalyzeRequest(**preset)
+    diag = _run(run_full_diagnostic_pipeline(req))
+    ev = diag.style_critique.get("pounce_ev_analysis")
+    assert ev is not None
+    assert ev["breakeven_probability_pct"] == 33.3
+    assert len(ev["step_evs"]) == len(diag.workability.ablation_steps)
+    assert any(s["rational_to_pounce"] for s in ev["step_evs"])
+
+
+
 
 
 

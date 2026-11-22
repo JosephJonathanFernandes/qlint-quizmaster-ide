@@ -606,6 +606,35 @@ function renderInlineAnnotations(rawQuestion, highlights) {
 
 function renderWorkabilityFunnel(work) {
   document.getElementById("difficulty-tier-badge").textContent = work.difficulty_tier;
+  const evData = LAST_DIAGNOSTIC?.style_critique?.pounce_ev_analysis;
+  const evStripHtml = evData
+    ? `<div class="mt-2 pt-2 border-t border-slate-800/80">
+        <div class="flex flex-wrap items-center justify-between gap-1.5 mb-1.5">
+          <span class="text-[10px] font-mono-code font-bold uppercase text-indigo-300">🎲 Game-Theoretic Pounce EV (${escapeHtml(
+            evData.scoring_rules
+          )} • Breakeven p &gt; ${evData.breakeven_probability_pct}%)</span>
+          <span class="text-[10px] font-mono-code px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-200">${escapeHtml(
+            evData.economy_verdict
+          )}</span>
+        </div>
+        <div class="flex flex-wrap gap-1.5 mb-1">
+          ${(evData.step_evs || [])
+            .map(
+              (s) =>
+                `<span class="px-2 py-0.5 rounded font-mono-code text-[10px] border ${
+                  s.expected_value_pts > 0
+                    ? "bg-emerald-950/50 text-emerald-300 border-emerald-700/50"
+                    : "bg-rose-950/50 text-rose-300 border-rose-700/50"
+                }">${escapeHtml(s.clue_label)}: EV ${s.expected_value_pts > 0 ? "+" : ""}${
+                  s.expected_value_pts
+                } pts</span>`
+            )
+            .join("")}
+        </div>
+        <div class="text-[11px] text-slate-300">${escapeHtml(evData.summary)}</div>
+      </div>`
+    : "";
+
   document.getElementById("pounce-calibration-box").innerHTML = `
     <div class="flex flex-col gap-1">
       <div><strong class="text-cyan-300">Pounce/Bounce Diagnosis:</strong> ${escapeHtml(
@@ -614,6 +643,7 @@ function renderWorkabilityFunnel(work) {
       <div class="font-mono-code text-[11px] text-slate-400">${escapeHtml(
         work.funnel_diagnosis
       )}</div>
+      ${evStripHtml}
     </div>
   `;
 
