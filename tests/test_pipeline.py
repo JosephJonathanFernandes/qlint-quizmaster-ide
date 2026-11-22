@@ -192,6 +192,20 @@ def test_visual_clue_linter_catches_filename_and_exif_leaks():
     assert res["visual_safety_score"] < 50
 
 
+def test_batch_round_linting_and_markdown_audit_export():
+    """Verify Batch Round Linting and Markdown Audit Report generation."""
+    from backend.main import batch_lint_quiz_set, export_set_markdown_report
+
+    batch_res = _run(batch_lint_quiz_set())
+    assert batch_res["total_questions"] >= 3
+    assert len(batch_res["batch_lint_results"]) == batch_res["total_questions"]
+
+    report = _run(export_set_markdown_report())
+    assert "Crucible // Q-Lint Audit Report" in report["markdown"]
+    assert "| Q1 |" in report["markdown"]
+
+
+
 
 
 

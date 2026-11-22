@@ -150,6 +150,20 @@ class QuizSetManager:
             conn.commit()
             return cur.rowcount > 0
 
+    def update_question_scores(
+        self, item_id: int, quality_score: int, workability_score: int, difficulty_tier: str
+    ) -> None:
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute(
+                """
+                UPDATE set_questions
+                SET quality_score = ?, workability_score = ?, difficulty_tier = ?
+                WHERE id = ?
+                """,
+                (int(quality_score), int(workability_score), difficulty_tier, int(item_id)),
+            )
+            conn.commit()
+
     def analyze_set(self, set_name: str = "KQA Open Finals — Round 1") -> Dict[str, Any]:
         """Compute round-level analytics: pacing curve, domain balance, and cross-question spoiler leaks."""
         items = self.get_set_questions(set_name)

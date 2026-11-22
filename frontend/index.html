@@ -622,12 +622,18 @@
             <h1 class="text-lg font-extrabold text-white mt-0.5">📋 Quiz Round Compiler &amp; Cross-Question Spoiler Detector</h1>
             <p class="text-xs text-slate-400">Compile linted questions into a balanced tournament round, detect cross-question answer spoilers automatically, and launch a projector-ready HTML slide deck.</p>
           </div>
-          <div class="flex items-center gap-2.5">
-            <button onclick="toggleHostConsole()" id="btn-toggle-host-console" class="px-4 py-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 text-xs font-bold transition flex items-center gap-1.5">
-              <span>🏆</span><span>Open Live Pounce/Bounce Scoreboard</span>
+          <div class="flex flex-wrap items-center gap-2">
+            <button onclick="batchLintEntireRound()" id="btn-batch-lint" class="px-3.5 py-2.5 rounded-xl bg-emerald-600/25 hover:bg-emerald-600/40 text-emerald-200 border border-emerald-500/40 text-xs font-bold transition flex items-center gap-1.5">
+              <span>⚡</span><span>Batch-Lint All Qs</span>
             </button>
-            <a href="/api/sets/export/slides" target="_blank" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white text-xs font-bold shadow-lg transition flex items-center gap-1.5">
-              <span>🎬</span><span>Launch Projector Slide Deck ↗</span>
+            <button onclick="downloadRoundMarkdownReport()" class="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition">
+              📄 Export Audit (.md)
+            </button>
+            <button onclick="toggleHostConsole()" id="btn-toggle-host-console" class="px-3.5 py-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 text-xs font-bold transition flex items-center gap-1.5">
+              <span>🏆</span><span>Host Scoreboard</span>
+            </button>
+            <a href="/api/sets/export/slides" target="_blank" class="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white text-xs font-bold shadow-lg transition flex items-center gap-1.5">
+              <span>🎬</span><span>Projector Deck ↗</span>
             </a>
           </div>
         </div>

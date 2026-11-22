@@ -175,6 +175,73 @@ async def export_set_slides(set_name: str = "KQA Open Finals — Round 1"):
     return HTMLResponse(content=html_deck)
 
 
+@app.post("/api/sets/lint-all")
+async def batch_lint_quiz_set(set_name: str = "KQA Open Finals — Round 1") -> Dict[str, Any]:
+    """Run the 4-stage diagnostic linter across every question in the active round concurrently."""
+    import asyncio
+
+    items = set_manager.get_set_questions(set_name)
+    if not items:
+        return set_manager.analyze_set(set_name)
+
+    async def _lint_one(item: Dict[str, Any]) -> Dict[str, Any]:
+        req = QuestionAnalyzeRequest(
+            question_text=item["question_text"],
+            target_answer=item["target_answer"],
+            category=item.get("category", "General"),
+            quiz_style="KQA Open",
+        )
+        diag = await run_full_diagnostic_pipeline(req)
+        set_manager.update_question_scores(
+            item_id=item["id"],
+            quality_score=diag.overall_quality_score,
+            workability_score=diag.workability.workability_score,
+            difficulty_tier=diag.workability.difficulty_tier,
+        )
+        return {
+            "id": item["id"],
+            "target_answer": item["target_answer"],
+            "overall_score": diag.overall_quality_score,
+            "workability_score": diag.workability.workability_score,
+            "verdict_badge": diag.verdict_badge,
+        }
+
+    lint_summaries = await asyncio.gather(*[_lint_one(it) for it in items])
+    updated_set = set_manager.analyze_set(set_name)
+    updated_set["batch_lint_results"] = lint_summaries
+    return updated_set
+
+
+@app.get("/api/sets/export/report")
+async def export_set_markdown_report(set_name: str = "KQA Open Finals — Round 1") -> Dict[str, Any]:
+    """Generate a formatted Markdown Setter Audit Report for the entire round."""
+    data = set_manager.analyze_set(set_name)
+    lines = [
+        f"# {data['set_name']} — Crucible // Q-Lint Audit Report",
+        "",
+        f"- **Questions:** {data['total_questions']}",
+        f"- **Average Quality Score:** {data['avg_quality_score']}/100",
+        f"- **Pacing Verdict:** {data['pacing_verdict']}",
+        f"- **Cross-Question Spoilers:** {len(data['cross_question_spoilers'])}",
+        "",
+        "| # | Target Answer | Category | Quality | Workability | Difficulty Tier |",
+        "|---|---|---|---:|---:|---|",
+    ]
+    for idx, q in enumerate(data["questions"], start=1):
+        lines.append(
+            f"| Q{idx} | **{q['target_answer']}** | {q['category']} | {q['quality_score']}/100 | {q['workability_score']}/100 | {q['difficulty_tier']} |"
+        )
+    lines.append("")
+    for idx, q in enumerate(data["questions"], start=1):
+        lines.append(f"### Q{idx}. {q['target_answer']} ({q['category']})")
+        lines.append(f"> {q['question_text']}")
+        lines.append(f"**Answer:** {q['target_answer']}")
+        if q.get("funda_notes"):
+            lines.append(f"*Notes:* {q['funda_notes']}")
+        lines.append("")
+    return {"set_name": set_name, "markdown": "\n".join(lines)}
+
+
 if FRONTEND_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 

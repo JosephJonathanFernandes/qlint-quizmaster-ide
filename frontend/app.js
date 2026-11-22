@@ -1731,10 +1731,105 @@ async function loadRoundSet() {
         ${catChips}
       </div>
 
+      ${renderRoundPacingSvg(data.questions || [])}
+
       <div class="flex flex-col gap-3">${qRows}</div>
     `;
   } catch (e) {
     console.error("Failed to load round set:", e);
+  }
+}
+
+function renderRoundPacingSvg(questions) {
+  if (!questions || questions.length < 2) return "";
+  const w = 560;
+  const h = 92;
+  const padX = 32;
+  const padY = 16;
+  const usableW = w - padX * 2;
+  const usableH = h - padY * 2;
+
+  const qPts = questions.map((q, i) => {
+    const x = padX + (i / Math.max(1, questions.length - 1)) * usableW;
+    const y = padY + (1 - Math.min(100, Math.max(0, q.quality_score)) / 100) * usableH;
+    return { x, y, val: q.quality_score, label: `Q${i + 1}` };
+  });
+
+  const wPts = questions.map((q, i) => {
+    const x = padX + (i / Math.max(1, questions.length - 1)) * usableW;
+    const y = padY + (1 - Math.min(100, Math.max(0, q.workability_score)) / 100) * usableH;
+    return { x, y, val: q.workability_score };
+  });
+
+  return `
+    <div class="mb-4 p-3.5 rounded-xl bg-slate-950/80 border border-slate-800/90">
+      <div class="flex items-center justify-between text-[10px] font-mono-code mb-1">
+        <span class="uppercase text-indigo-300 font-bold">Round Quality &amp; Workability Pacing Curve (Q1 → Q${
+          questions.length
+        })</span>
+        <div class="flex items-center gap-3">
+          <span class="text-emerald-400">● Quality Score</span>
+          <span class="text-cyan-400">--- Workability</span>
+        </div>
+      </div>
+      <svg viewBox="0 0 ${w} ${h}" class="w-full h-24">
+        <line x1="${padX}" y1="${h - padY}" x2="${w - padX}" y2="${
+    h - padY
+  }" stroke="#1e293b" stroke-width="1" />
+        <polyline points="${wPts.map((p) => `${p.x},${p.y}`).join(" ")}" fill="none" stroke="#06b6d4" stroke-width="1.6" stroke-dasharray="4,3" />
+        <polyline points="${qPts.map((p) => `${p.x},${p.y}`).join(" ")}" fill="none" stroke="#10b981" stroke-width="2.2" />
+        ${qPts
+          .map(
+            (p) => `
+          <circle cx="${p.x}" cy="${p.y}" r="3.6" fill="#10b981" stroke="#064e3b" stroke-width="1.5" />
+          <text x="${p.x}" y="${p.y - 6}" text-anchor="middle" fill="#a7f3d0" font-size="9" font-family="JetBrains Mono">${p.val}</text>
+          <text x="${p.x}" y="${h - 2}" text-anchor="middle" fill="#64748b" font-size="9" font-family="JetBrains Mono">${p.label}</text>
+        `
+          )
+          .join("")}
+      </svg>
+    </div>
+  `;
+}
+
+async function batchLintEntireRound() {
+  const btn = document.getElementById("btn-batch-lint");
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<span class="animate-spin inline-block w-3.5 h-3.5 border-2 border-emerald-300 border-t-transparent rounded-full"></span><span>Linting All Qs...</span>`;
+  }
+  try {
+    const res = await fetch("/api/sets/lint-all", { method: "POST" });
+    const data = await res.json();
+    showToast(
+      `Batch-linted all ${data.total_questions} questions! Round Avg: ${data.avg_quality_score}/100.`,
+      "success"
+    );
+    await loadRoundSet();
+  } catch (e) {
+    showToast("Batch round linting failed.", "error");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `<span>⚡</span><span>Batch-Lint All Qs</span>`;
+    }
+  }
+}
+
+async function downloadRoundMarkdownReport() {
+  try {
+    const res = await fetch("/api/sets/export/report");
+    const data = await res.json();
+    const blob = new Blob([data.markdown || ""], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `crucible-round-audit-${Date.now()}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast("Downloaded Markdown Round Audit Report!", "success");
+  } catch (e) {
+    showToast("Failed to export report.", "error");
   }
 }
 
