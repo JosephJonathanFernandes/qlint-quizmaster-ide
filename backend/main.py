@@ -152,6 +152,11 @@ async def execute_benchmark() -> Dict[str, Any]:
     return await run_academic_benchmark()
 
 
+@app.get("/api/sets/list")
+async def list_quiz_sets() -> Dict[str, Any]:
+    return {"sets": set_manager.list_sets()}
+
+
 @app.get("/api/sets")
 async def get_quiz_set(set_name: str = "KQA Open Finals — Round 1") -> Dict[str, Any]:
     return set_manager.analyze_set(set_name=set_name)
@@ -173,6 +178,16 @@ async def delete_from_quiz_set(item_id: int) -> Dict[str, Any]:
 async def export_set_slides(set_name: str = "KQA Open Finals — Round 1"):
     html_deck = set_manager.export_standalone_html_deck(set_name=set_name)
     return HTMLResponse(content=html_deck)
+
+
+@app.get("/api/sets/export/prelims", response_class=HTMLResponse)
+async def export_set_prelims(
+    set_name: str = "KQA Open Finals — Round 1", answers: bool = False
+):
+    html_sheet = set_manager.export_printable_prelims_html(
+        set_name=set_name, include_answers=answers
+    )
+    return HTMLResponse(content=html_sheet)
 
 
 @app.post("/api/sets/lint-all")

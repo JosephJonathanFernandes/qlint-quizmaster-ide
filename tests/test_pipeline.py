@@ -205,6 +205,23 @@ def test_batch_round_linting_and_markdown_audit_export():
     assert "| Q1 |" in report["markdown"]
 
 
+def test_printable_prelims_and_multi_round_listing():
+    """Verify Multi-Round Set listing and Printable Prelims PDF/Master Key HTML export."""
+    from backend.main import list_quiz_sets, export_set_prelims
+
+    sets_res = _run(list_quiz_sets())
+    assert len(sets_res["sets"]) >= 1
+
+    teams_paper = _run(export_set_prelims(answers=False))
+    assert "WRITTEN PRELIMS QUESTION PAPER" in teams_paper.body.decode("utf-8")
+    assert "★ TIE-BREAKER" in teams_paper.body.decode("utf-8")
+
+    qm_key = _run(export_set_prelims(answers=True))
+    assert "QUIZMASTER MASTER KEY" in qm_key.body.decode("utf-8")
+    assert "Stanley Kubrick" in qm_key.body.decode("utf-8")
+
+
+
 
 
 

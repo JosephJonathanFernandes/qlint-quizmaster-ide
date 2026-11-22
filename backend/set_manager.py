@@ -114,6 +114,22 @@ class QuizSetManager:
             ).fetchall()
         return [dict(r) for r in rows]
 
+    def list_sets(self) -> List[Dict[str, Any]]:
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                """
+                SELECT set_name, COUNT(*) AS count, ROUND(AVG(quality_score), 1) AS avg_quality
+                FROM set_questions
+                GROUP BY set_name
+                ORDER BY set_name ASC
+                """
+            ).fetchall()
+        result = [dict(r) for r in rows]
+        if not result:
+            result = [{"set_name": "KQA Open Finals — Round 1", "count": 0, "avg_quality": 0}]
+        return result
+
     def add_question_to_set(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         set_name = payload.get("set_name") or "KQA Open Finals — Round 1"
         with sqlite3.connect(self.db_path) as conn:
@@ -343,6 +359,102 @@ class QuizSetManager:
     }});
     render();
   </script>
+</body>
+</html>"""
+
+
+    def export_printable_prelims_html(
+        self, set_name: str = "KQA Open Finals — Round 1", include_answers: bool = False
+    ) -> str:
+        """Generate a clean, print/PDF-ready Written Prelims Question Paper or QM Master Key."""
+        items = self.get_set_questions(set_name)
+        safe_title = html.escape(set_name)
+
+        q_blocks: List[str] = []
+        for idx, q in enumerate(items, start=1):
+            is_star = (idx % 3 == 0)
+            star_badge = '<span class="star">★ TIE-BREAKER</span>' if is_star else ""
+            ans_html = (
+                f'<div class="ans-box"><strong>Answer:</strong> {html.escape(q["target_answer"])}'
+                + (
+                    f'<div class="funda">{html.escape(q["funda_notes"])}</div>'
+                    if q.get("funda_notes")
+                    else ""
+                )
+                + "</div>"
+            )
+            blank_html = '<div class="blank-line">Answer: ____________________________________________________________</div>'
+            q_blocks.append(
+                f"""
+                <div class="q-item">
+                  <div class="q-meta">
+                    <span class="q-num">Q{idx}.</span>
+                    <span class="q-cat">{html.escape(q["category"])}</span>
+                    {star_badge}
+                  </div>
+                  <div class="q-text">{html.escape(q["question_text"])}</div>
+                  {ans_html if include_answers else blank_html}
+                </div>
+                """
+            )
+
+        mode_label = "QUIZMASTER MASTER KEY (ANSWERS + FUNDA)" if include_answers else "WRITTEN PRELIMS QUESTION PAPER (TEAMS COPY)"
+        toggle_href = (
+            f"/api/sets/export/prelims?set_name={html.escape(set_name)}&answers={'false' if include_answers else 'true'}"
+        )
+        toggle_text = "Switch to Teams Question Paper" if include_answers else "Switch to QM Master Answer Key"
+
+        return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>{safe_title} — Printable Prelims</title>
+  <style>
+    * {{ box-sizing: border-box; }}
+    body {{ font-family: Georgia, "Times New Roman", serif; color: #0f172a; background: #f8fafc; margin: 0; padding: 24px; }}
+    .toolbar {{ max-width: 820px; margin: 0 auto 18px auto; display: flex; justify-content: space-between; align-items: center; background: #0f172a; color: #f8fafc; padding: 12px 18px; border-radius: 10px; font-family: system-ui, sans-serif; font-size: 13px; }}
+    .toolbar a, .toolbar button {{ background: #4f46e5; color: #fff; border: none; padding: 7px 14px; border-radius: 7px; text-decoration: none; font-weight: 600; cursor: pointer; font-size: 12px; }}
+    .toolbar a {{ background: #334155; margin-right: 8px; }}
+    .sheet {{ max-width: 820px; margin: 0 auto; background: #ffffff; padding: 40px 48px; border: 1px solid #cbd5e1; border-radius: 6px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }}
+    .header {{ border-bottom: 2px solid #0f172a; padding-bottom: 14px; margin-bottom: 22px; }}
+    .header h1 {{ margin: 0 0 4px 0; font-size: 24px; }}
+    .header .sub {{ font-family: system-ui, sans-serif; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: #475569; }}
+    .team-box {{ display: flex; justify-content: space-between; margin-top: 14px; font-family: system-ui, sans-serif; font-size: 13px; }}
+    .q-item {{ margin-bottom: 22px; page-break-inside: avoid; }}
+    .q-meta {{ font-family: system-ui, sans-serif; font-size: 12px; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }}
+    .q-num {{ font-weight: 800; font-size: 14px; }}
+    .q-cat {{ color: #475569; text-transform: uppercase; font-size: 10px; letter-spacing: 0.06em; }}
+    .star {{ background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; }}
+    .q-text {{ font-size: 15px; line-height: 1.55; margin-bottom: 8px; }}
+    .blank-line {{ font-family: system-ui, sans-serif; font-size: 12px; color: #64748b; margin-top: 6px; }}
+    .ans-box {{ background: #ecfdf5; border-left: 3px solid #10b981; padding: 8px 12px; font-family: system-ui, sans-serif; font-size: 13px; color: #065f46; }}
+    .funda {{ font-size: 11.5px; color: #334155; margin-top: 4px; font-style: italic; }}
+    @media print {{
+      body {{ background: #fff; padding: 0; }}
+      .toolbar {{ display: none !important; }}
+      .sheet {{ border: none; box-shadow: none; padding: 0; max-width: 100%; }}
+    }}
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <span><strong>CRUCIBLE // Q-LINT</strong> — Printable Prelims Exporter</span>
+    <div>
+      <a href="{toggle_href}">{toggle_text}</a>
+      <button onclick="window.print()">🖨 Print / Save as PDF</button>
+    </div>
+  </div>
+  <div class="sheet">
+    <div class="header">
+      <div class="sub">{mode_label}</div>
+      <h1>{safe_title}</h1>
+      <div class="team-box">
+        <span><strong>Team / Institution:</strong> ________________________________</span>
+        <span><strong>Score:</strong> _____ / {len(items)}</span>
+      </div>
+    </div>
+    {''.join(q_blocks) or '<p>No questions in this round yet.</p>'}
+  </div>
 </body>
 </html>"""
 
