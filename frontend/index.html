@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CRUCIBLE // Q-Lint — Competitive Quizmaster Diagnostic IDE</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body class="min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
+
+  <!-- ===================================================================== -->
+  <!-- TOP COMMAND & TELEMETRY HEADER                                        -->
+  <!-- ===================================================================== -->
+  <header class="sticky top-0 z-30 border-b border-slate-800/80 bg-slate-950/85 backdrop-blur-xl px-5 py-2.5">
+    <div class="max-w-[1640px] mx-auto flex flex-wrap items-center justify-between gap-3">
+      <!-- Brand Identity -->
+      <div class="flex items-center gap-3">
+        <div class="relative w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-600 to-cyan-500 flex items-center justify-center shadow-lg shadow-indigo-500/25 font-mono-code font-extrabold text-white text-lg">
+          Q
+          <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-slate-950"></span>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-extrabold tracking-tight text-white text-base">CRUCIBLE</span>
+            <span class="text-[10px] font-mono-code font-semibold px-2 py-0.5 rounded-md bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">Q-LINT IDE v2.0</span>
+          </div>
+          <p class="text-[11px] text-slate-400 hidden sm:block">Dual-Engine (Groq LPU + Gemini) &amp; 9-API Federated Truth Workbench</p>
+        </div>
+      </div>
+
+      <!-- 5 Primary Workspace Navigation Tabs -->
+      <nav class="flex items-center gap-1 bg-slate-900/90 p-1 rounded-xl border border-slate-800/90 overflow-x-auto">
+        <button onclick="switchTab('linter')" id="tab-btn-linter" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-indigo-600 text-white shadow flex items-center gap-1.5">
+          <span>⚡</span><span>Setter Linter IDE</span>
+        </button>
+        <button onclick="switchTab('miner')" id="tab-btn-miner" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-white flex items-center gap-1.5">
+          <span>⛏</span><span>Funda Miner</span>
+        </button>
+        <button onclick="switchTab('playtest')" id="tab-btn-playtest" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-white flex items-center gap-1.5">
+          <span>🎯</span><span>Pounce Sim</span>
+        </button>
+        <button onclick="switchTab('connect')" id="tab-btn-connect" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-white flex items-center gap-1.5">
+          <span>🕸</span><span>2-Hop Connect</span>
+        </button>
+        <button onclick="switchTab('setbuilder')" id="tab-btn-setbuilder" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-white flex items-center gap-1.5">
+          <span>📋</span><span>Round Builder</span>
+        </button>
+        <button onclick="switchTab('archive')" id="tab-btn-archive" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-white flex items-center gap-1.5">
+          <span>🗄</span><span>Archive</span>
+        </button>
+        <button onclick="switchTab('benchmark')" id="tab-btn-benchmark" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-white flex items-center gap-1.5">
+          <span>📊</span><span>CSE Benchmark</span>
+        </button>
+      </nav>
+
+      <!-- Live Engine Pills & Quick Actions -->
+      <div class="flex items-center gap-2">
+        <button onclick="openSettingsModal()" id="status-pill-gemini" title="Configure Google Gemini API" class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono-code bg-slate-900/90 border border-slate-700/80 hover:border-indigo-400 transition">
+          <span class="w-2 h-2 rounded-full bg-amber-400" id="dot-gemini"></span>
+          <span id="label-gemini">Gemini</span>
+        </button>
+        <button onclick="openSettingsModal()" id="status-pill-groq" title="Configure Groq LPU API" class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono-code bg-slate-900/90 border border-slate-700/80 hover:border-cyan-400 transition">
+          <span class="w-2 h-2 rounded-full bg-amber-400" id="dot-groq"></span>
+          <span id="label-groq">Groq LPU</span>
+        </button>
+        <button onclick="openSettingsModal()" title="View 9 Federated Truth-Finding APIs" class="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono-code bg-emerald-950/60 text-emerald-300 border border-emerald-700/50 hover:border-emerald-400 transition">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span>
+          <span id="label-truth-count">7 Truth APIs</span>
+        </button>
+        <button onclick="openSlidePreviewModal()" title="Preview as Tournament Slide Deck" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-indigo-950/70 hover:bg-indigo-900/80 text-indigo-200 border border-indigo-700/50 transition flex items-center gap-1">
+          <span>🎬</span><span class="hidden xl:inline">Slide Deck</span>
+        </button>
+        <button onclick="openSettingsModal()" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+          ⚙ Keys
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===================================================================== -->
+  <!-- MAIN WORKSPACE CONTAINER                                              -->
+  <!-- ===================================================================== -->
+  <main class="flex-1 max-w-[1640px] w-full mx-auto px-5 py-5">
+
+    <!-- =================================================================== -->
+    <!-- TAB 1: SPLIT-PANE QUESTION LINTER IDE                               -->
+    <!-- =================================================================== -->
+    <section id="tab-linter" class="flex flex-col gap-5">
+
+      <!-- TOP QUICK-SELECT DIAGNOSTIC PRESET CARDS CAROUSEL -->
+      <div class="glass-card rounded-2xl p-3.5">
+        <div class="flex items-center justify-between mb-2 px-1">
+          <div class="flex items-center gap-2">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-indigo-300">⚡ Interactive Failure-Mode &amp; Calibration Presets</span>
+            <span class="text-[11px] text-slate-400 hidden sm:inline">— Click any scenario to test the 4-stage linter live</span>
+          </div>
+          <span class="text-[11px] font-mono-code text-slate-400 hidden md:inline">Shortcut: <kbd class="kbd-tag">Ctrl</kbd> + <kbd class="kbd-tag">Enter</kbd> to Lint</span>
+        </div>
+        <div id="preset-chips-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5"></div>
+        <!-- Hidden fallback select for compatibility -->
+        <select id="preset-selector" class="hidden"></select>
+      </div>
+
+      <!-- SPLIT PANE GRID -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+        <!-- LEFT PANE: SETTER WORKBENCH & CLUE COMPILER (5 COLS) -->
+        <div class="lg:col-span-5 flex flex-col gap-4 lg:sticky lg:top-16">
+          <div class="glass-card rounded-2xl p-5 flex flex-col gap-4">
+
+            <!-- Header & Format Controls -->
+            <div class="flex items-center justify-between border-b border-slate-800/80 pb-3">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-indigo-400"></span>
+                <h2 class="text-xs font-bold uppercase tracking-wider text-slate-200">Setter Question Compiler</h2>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <button onclick="openSlidePreviewModal()" class="px-2 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-[11px] text-indigo-300 border border-slate-700 transition">
+                  🎬 Stage Slide
+                </button>
+                <button onclick="copyQuestionMarkdown()" class="px-2 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-[11px] text-slate-300 border border-slate-700 transition">
+                  📋 Copy MD
+                </button>
+              </div>
+            </div>
+
+            <!-- Circuit Style, Play Mode, Domain -->
+            <div class="grid grid-cols-3 gap-2.5">
+              <div>
+                <label class="block text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Circuit Tone</label>
+                <select id="input-style" class="w-full bg-slate-950/90 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:border-indigo-500 focus:outline-none">
+                  <option value="KQA Open">KQA Open</option>
+                  <option value="BQC Bounce/Pounce">BQC Bounce/Pounce</option>
+                  <option value="Nihilanth Inter-IIT/IIM">Nihilanth Inter-IIT/IIM</option>
+                  <option value="Campus Fest General">Campus Fest General</option>
+                  <option value="Tata Crucible Biz">Tata Crucible Biz</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Play Mode</label>
+                <select id="input-mode" class="w-full bg-slate-950/90 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:border-indigo-500 focus:outline-none">
+                  <option value="Pounce + Bounce">Pounce + Bounce</option>
+                  <option value="Direct Written Prelims">Written Prelims</option>
+                  <option value="Buzzer Finals">Buzzer Finals</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Category</label>
+                <input id="input-category" type="text" value="Literature & History" class="w-full bg-slate-950/90 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:border-indigo-500 focus:outline-none" />
+              </div>
+            </div>
+
+            <!-- Draft Question Editor with Live Metrics -->
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <label class="text-xs font-semibold text-slate-200 flex items-center gap-2">
+                  <span>Draft Question Prompt</span>
+                  <span class="text-[10px] font-mono-code px-1.5 py-0.5 rounded bg-slate-800 text-cyan-300" id="clue-count-pill">3 clues</span>
+                </label>
+                <div class="flex items-center gap-2">
+                  <span id="reading-time-badge" class="text-[11px] font-mono-code text-slate-400">~15s read</span>
+                  <span id="word-count-badge" class="text-[11px] font-mono-code text-slate-400">0 words</span>
+                </div>
+              </div>
+              <textarea id="input-question" rows="6" oninput="updateWordCount()" placeholder="Write your multi-clue deductive question here (use X / Y for target variables)..." class="w-full bg-slate-950/95 border border-slate-700/90 rounded-xl p-3.5 text-sm text-slate-100 leading-relaxed focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/40 transition"></textarea>
+            </div>
+
+            <!-- Interactive Segmented Clue Reorder & Structure Bar -->
+            <div class="bg-slate-950/70 border border-slate-800/90 rounded-xl p-3">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-cyan-300">Compiled Clue Order (Click ⇅ to Swap Clue Pacing)</span>
+                <button onclick="launchPlaytestFromCurrent()" class="text-[10px] font-semibold text-indigo-300 hover:text-indigo-200 underline">
+                  🎯 Playtest Funnel →
+                </button>
+              </div>
+              <div id="interactive-clue-pills" class="flex flex-col gap-1.5 text-xs"></div>
+            </div>
+
+            <!-- Target Answer & Acceptable Aliases -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-[11px] font-semibold text-emerald-300 mb-1">Target Answer (A*)</label>
+                <input id="input-answer" type="text" placeholder="e.g. Mary Shelley" class="w-full bg-slate-950 border border-emerald-600/60 rounded-xl px-3 py-2 text-sm font-bold text-emerald-200 focus:outline-none focus:border-emerald-400" />
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-400 mb-1">Acceptable Aliases (comma-sep)</label>
+                <input id="input-aliases" type="text" placeholder="e.g. Mary Godwin, Wollstonecraft" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-indigo-500" />
+              </div>
+            </div>
+
+            <!-- Primary Compile & Lint Action Bar -->
+            <div class="flex items-center gap-2">
+              <button id="btn-run-linter" onclick="runDiagnosticLinter()" class="flex-1 py-2.5 px-3.5 rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white font-bold text-sm shadow-lg shadow-indigo-600/30 transition flex items-center justify-center gap-2">
+                <span>⚡ Compile &amp; Lint</span>
+              </button>
+              <button onclick="addCurrentToRoundSet()" title="Add linted question to Round Set Builder" class="py-2.5 px-3 rounded-xl bg-emerald-950/70 hover:bg-emerald-900/80 text-emerald-200 text-xs font-semibold border border-emerald-700/50 transition">
+                + Round
+              </button>
+              <button onclick="saveCurrentToArchive()" title="Save verified question to local SQLite archive" class="py-2.5 px-3 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition">
+                + Archive
+              </button>
+            </div>
+
+            <!-- One-Click AI Calibration Fixes & Before/After Diff Viewer -->
+            <div class="border-t border-slate-800/80 pt-3">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">One-Click AI Calibration Surgery (Groq / Gemini)</span>
+                <span id="autofix-engine-badge" class="text-[10px] font-mono-code text-cyan-400"></span>
+              </div>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <button onclick="triggerAutofix('DE_GOOGLEIFY')" class="px-2.5 py-2 rounded-xl bg-rose-950/50 hover:bg-rose-900/70 border border-rose-700/50 text-rose-200 text-[11px] font-semibold transition flex items-center justify-center gap-1">
+                  <span>🛡</span><span>De-Googleify</span>
+                </button>
+                <button onclick="triggerAutofix('BLOCK_COOK')" class="px-2.5 py-2 rounded-xl bg-amber-950/50 hover:bg-amber-900/70 border border-amber-700/50 text-amber-200 text-[11px] font-semibold transition flex items-center justify-center gap-1">
+                  <span>🔒</span><span>Block Cook</span>
+                </button>
+                <button onclick="triggerAutofix('FIX_MYTH')" class="px-2.5 py-2 rounded-xl bg-purple-950/50 hover:bg-purple-900/70 border border-purple-700/50 text-purple-200 text-[11px] font-semibold transition flex items-center justify-center gap-1">
+                  <span>📚</span><span>Fix Myth</span>
+                </button>
+                <button onclick="triggerAutofix('FULL_POLISH')" class="px-2.5 py-2 rounded-xl bg-indigo-950/60 hover:bg-indigo-900/80 border border-indigo-700/50 text-indigo-200 text-[11px] font-semibold transition flex items-center justify-center gap-1">
+                  <span>✨</span><span>KQA Polish</span>
+                </button>
+              </div>
+              <!-- Before / After Diff Panel -->
+              <div id="autofix-changelog" class="hidden mt-3 p-3 rounded-xl bg-indigo-950/40 border border-indigo-500/40 text-xs text-indigo-100 animate-fade-in"></div>
+            </div>
+
+            <!-- Inline Span-Annotated Question View -->
+            <div class="border-t border-slate-800/80 pt-3">
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Span-Level Linter Annotations (Hover Spans)</span>
+                <div class="flex items-center gap-2 text-[10px]">
+                  <span class="hl-leak">1-Hop Leak</span>
+                  <span class="hl-myth">Myth/Contested</span>
+                  <span class="hl-verified">Multi-API Verified</span>
+                </div>
+              </div>
+              <div id="annotated-question-view" class="p-3.5 rounded-xl bg-slate-950/90 border border-slate-800/90 text-xs leading-relaxed text-slate-200">
+                Run diagnostics to see inline span-level annotations for search leaks, verified claims, and apocryphal trivia.
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- RIGHT PANE: 4-STAGE DIAGNOSTIC REPORT & VISUAL ANALYTICS (7 COLS) -->
+        <div class="lg:col-span-7 flex flex-col gap-5">
+
+          <!-- =============================================================== -->
+          <!-- EXECUTIVE SCORECARD + 5-AXIS PENTAGON RADAR SVG                 -->
+          <!-- =============================================================== -->
+          <div class="glass-card rounded-2xl p-5">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-5 items-center pb-4 border-b border-slate-800/80">
+              <!-- Score Dial & Summary (8 cols) -->
+              <div class="md:col-span-8 flex items-start gap-4">
+                <div id="overall-score-circle" class="w-20 h-20 shrink-0 rounded-2xl bg-indigo-500/15 border-2 border-indigo-500 flex flex-col items-center justify-center shadow-inner">
+                  <span id="overall-score-val" class="text-3xl font-extrabold font-mono-code text-white">--</span>
+                  <span class="text-[9px] font-bold uppercase tracking-widest text-indigo-300">Quality</span>
+                </div>
+                <div class="flex-1">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span id="verdict-badge" class="px-3 py-0.5 rounded-full text-xs font-mono-code font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                      READY TO LINT
+                    </span>
+                    <span id="score-delta-badge" class="hidden px-2 py-0.5 rounded-md text-[11px] font-mono-code font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"></span>
+                  </div>
+                  <p id="executive-summary" class="text-xs text-slate-200 mt-2 leading-relaxed">
+                    Select a preset above or draft a question on the left and click "Compile &amp; Run 4-Stage Diagnostics".
+                  </p>
+                  <div id="telemetry-badge" class="text-[11px] font-mono-code text-slate-400 mt-2"></div>
+                </div>
+              </div>
+
+              <!-- 5-Axis Radar SVG Chart (4 cols) -->
+              <div class="md:col-span-4 flex flex-col items-center justify-center bg-slate-950/60 rounded-xl p-2.5 border border-slate-800/80">
+                <div id="radar-chart-svg" class="w-36 h-36 flex items-center justify-center text-[11px] text-slate-500">
+                  5-Axis Radar
+                </div>
+              </div>
+            </div>
+
+            <!-- 5 Sub-Score Metric Cards with Progress Bars -->
+            <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-4">
+              <div class="p-3 rounded-xl bg-slate-900/85 border border-slate-800/90">
+                <div class="flex items-center justify-between text-[10px] font-semibold uppercase text-slate-400">
+                  <span>1. Workability</span><span>🎯</span>
+                </div>
+                <div id="metric-workability" class="text-lg font-extrabold font-mono-code text-cyan-400 mt-0.5">--/100</div>
+                <div class="w-full h-1.5 bg-slate-950 rounded-full mt-1.5 overflow-hidden">
+                  <div id="bar-workability" class="h-full bg-cyan-400 transition-all duration-500" style="width: 0%"></div>
+                </div>
+              </div>
+              <div class="p-3 rounded-xl bg-slate-900/85 border border-slate-800/90">
+                <div class="flex items-center justify-between text-[10px] font-semibold uppercase text-slate-400">
+                  <span>2. Search Resist</span><span>🛡</span>
+                </div>
+                <div id="metric-google" class="text-lg font-extrabold font-mono-code text-emerald-400 mt-0.5">--/100</div>
+                <div class="w-full h-1.5 bg-slate-950 rounded-full mt-1.5 overflow-hidden">
+                  <div id="bar-google" class="h-full bg-emerald-400 transition-all duration-500" style="width: 0%"></div>
+                </div>
+              </div>
+              <div class="p-3 rounded-xl bg-slate-900/85 border border-slate-800/90">
+                <div class="flex items-center justify-between text-[10px] font-semibold uppercase text-slate-400">
+                  <span>3. Cook Safety</span><span>🔒</span>
+                </div>
+                <div id="metric-uniqueness" class="text-lg font-extrabold font-mono-code text-indigo-400 mt-0.5">--/100</div>
+                <div class="w-full h-1.5 bg-slate-950 rounded-full mt-1.5 overflow-hidden">
+                  <div id="bar-uniqueness" class="h-full bg-indigo-400 transition-all duration-500" style="width: 0%"></div>
+                </div>
+              </div>
+              <div class="p-3 rounded-xl bg-slate-900/85 border border-slate-800/90">
+                <div class="flex items-center justify-between text-[10px] font-semibold uppercase text-slate-400">
+                  <span>4. Fact Truth</span><span>📚</span>
+                </div>
+                <div id="metric-truth" class="text-lg font-extrabold font-mono-code text-amber-400 mt-0.5">--/100</div>
+                <div class="w-full h-1.5 bg-slate-950 rounded-full mt-1.5 overflow-hidden">
+                  <div id="bar-truth" class="h-full bg-amber-400 transition-all duration-500" style="width: 0%"></div>
+                </div>
+              </div>
+              <div class="p-3 rounded-xl bg-slate-900/85 border border-slate-800/90">
+                <div class="flex items-center justify-between text-[10px] font-semibold uppercase text-slate-400">
+                  <span>5. Angle Fresh</span><span>✨</span>
+                </div>
+                <div id="metric-originality" class="text-lg font-extrabold font-mono-code text-purple-400 mt-0.5">--/100</div>
+                <div class="w-full h-1.5 bg-slate-950 rounded-full mt-1.5 overflow-hidden">
+                  <div id="bar-originality" class="h-full bg-purple-400 transition-all duration-500" style="width: 0%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- =============================================================== -->
+          <!-- MODULE 1: CLUE-ABLATION WORKABILITY & SHANNON ENTROPY CURVE     -->
+          <!-- =============================================================== -->
+          <div class="glass-card rounded-2xl p-5">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <div>
+                <h2 class="text-sm font-bold text-white flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
+                  MODULE 1: Clue-Ablation Workability Funnel &amp; Shannon Entropy Curve
+                </h2>
+                <p class="text-[11px] text-slate-400">Progressive blinded solving across Gemini 2.5 Flash (Veteran) + Groq Llama-3.3-70B (Lateral) + Groq Llama-3.1-8B (Campus)</p>
+              </div>
+              <span id="difficulty-tier-badge" class="px-2.5 py-1 rounded-lg text-xs font-mono-code font-semibold bg-cyan-950/70 text-cyan-300 border border-cyan-700/50">
+                --
+              </span>
+            </div>
+
+            <!-- Interactive Shannon Entropy SVG Decay Curve + Pounce Diagnosis -->
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-4 mb-4">
+              <div class="md:col-span-5 bg-slate-950/80 border border-slate-800/90 rounded-xl p-3 flex flex-col justify-between">
+                <div class="text-[10px] font-bold uppercase tracking-wider text-cyan-300 mb-1">Shannon Entropy Decay H(A | c₁..cᵢ)</div>
+                <div id="entropy-curve-svg" class="w-full h-28 flex items-center justify-center text-xs text-slate-500">
+                  Entropy Curve
+                </div>
+                <div class="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-900">
+                  <span>Prior: 4.32 bits (~20 candidates)</span>
+                  <span class="text-emerald-400">Target Lock: &lt;0.5 bits</span>
+                </div>
+              </div>
+              <div class="md:col-span-7 bg-slate-900/80 border border-slate-800/90 rounded-xl p-3.5 flex flex-col justify-between">
+                <div id="pounce-calibration-box" class="text-xs text-slate-300 leading-relaxed">
+                  Waiting for clue ablation run...
+                </div>
+                <div id="workability-recommendations" class="mt-2 pt-2.5 border-t border-slate-800/80 text-xs text-slate-300"></div>
+              </div>
+            </div>
+
+            <!-- Progressive Ablation Steps Container -->
+            <div id="ablation-steps-container" class="flex flex-col gap-3"></div>
+          </div>
+
+          <!-- =============================================================== -->
+          <!-- MODULE 2: 1-HOP GOOGLEABILITY PROBE & ADVERSARIAL COOK DETECTOR -->
+          <!-- =============================================================== -->
+          <div class="glass-card rounded-2xl p-5">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <div>
+                <h2 class="text-sm font-bold text-white flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded-full bg-rose-400"></span>
+                  MODULE 2: Single-Hop Googleability Probe &amp; Adversarial "Cook" Detector
+                </h2>
+                <p class="text-[11px] text-slate-400">Tests masked surface clauses against live search engines &amp; hunts for unintended competing answers (A' ≠ A*)</p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- Left: 1-Hop Search Leak Probes -->
+              <div class="bg-slate-900/75 rounded-xl p-3.5 border border-slate-800/90">
+                <div class="flex items-center justify-between mb-2.5">
+                  <span class="text-xs font-bold text-rose-300">🛡 Live Single-Hop Search Leak Probes</span>
+                  <button onclick="triggerAutofix('DE_GOOGLEIFY')" class="text-[10px] font-semibold px-2 py-0.5 rounded bg-rose-950 hover:bg-rose-900 text-rose-200 border border-rose-700/50 transition">
+                    Auto-Patch Leaks
+                  </button>
+                </div>
+                <div id="search-leaks-container" class="flex flex-col gap-2.5 text-xs text-slate-400">
+                  No probes executed yet.
+                </div>
+              </div>
+
+              <!-- Right: Adversarial Cook Candidates -->
+              <div class="bg-slate-900/75 rounded-xl p-3.5 border border-slate-800/90">
+                <div class="flex items-center justify-between mb-2.5">
+                  <span class="text-xs font-bold text-amber-300">🔒 Adversarial "Cook" &amp; Uniqueness Verifier</span>
+                  <button onclick="triggerAutofix('BLOCK_COOK')" class="text-[10px] font-semibold px-2 py-0.5 rounded bg-amber-950 hover:bg-amber-900 text-amber-200 border border-amber-700/50 transition">
+                    Auto-Block Cook
+                  </button>
+                </div>
+                <div id="cook-candidates-container" class="flex flex-col gap-2.5 text-xs text-slate-400">
+                  No adversarial cook test executed yet.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- =============================================================== -->
+          <!-- MODULE 3: MULTI-API FEDERATED TRUTH-FINDING & MYTH FILTER       -->
+          <!-- =============================================================== -->
+          <div class="glass-card rounded-2xl p-5">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <div>
+                <h2 class="text-sm font-bold text-white flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+                  MODULE 3: Federated Multi-API Truth-Finding &amp; Urban Legend Filter
+                </h2>
+                <p class="text-[11px] text-slate-400">Grounds atomic claims across Wikipedia REST, Wikidata KG, DuckDuckGo, OpenAlex, OpenLibrary, CrossRef &amp; DictionaryAPI</p>
+              </div>
+              <span id="truth-summary-badge" class="px-2.5 py-1 rounded-lg text-xs font-mono-code font-semibold bg-emerald-950/70 text-emerald-300 border border-emerald-700/50">
+                7+ APIs Ready
+              </span>
+            </div>
+
+            <!-- Wikidata Canonical Entity Anchor -->
+            <div id="wikidata-entity-bar" class="mb-3 p-3 rounded-xl bg-slate-950/85 border border-slate-800 text-xs text-slate-300">
+              Entity knowledge graph metadata will appear here.
+            </div>
+
+            <!-- Verified Claims List -->
+            <div id="truth-claims-container" class="flex flex-col gap-3"></div>
+          </div>
+
+          <!-- =============================================================== -->
+          <!-- MODULE 4: DISENTANGLED "ANGLE-AWARE" ARCHIVE DEDUPLICATION      -->
+          <!-- =============================================================== -->
+          <div class="glass-card rounded-2xl p-5">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <div>
+                <h2 class="text-sm font-bold text-white flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded-full bg-purple-400"></span>
+                  MODULE 4: Disentangled "Angle-Aware" Archive Deduplication
+                </h2>
+                <p class="text-[11px] text-slate-400">Separates Target Entity Frequency ("Asked 3 times") from Specific Funda Similarity ("Same calcified heart angle used in BQC 2022")</p>
+              </div>
+              <span id="archive-collision-badge" class="px-2.5 py-1 rounded-lg text-xs font-mono-code font-semibold bg-purple-950/70 text-purple-300 border border-purple-700/50">
+                --
+              </span>
+            </div>
+
+            <div id="archive-matches-container" class="flex flex-col gap-2.5"></div>
+            <div id="fresh-angles-container" class="mt-3"></div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- TAB 1.5: FUNDA MINER & STYLE-CALIBRATED CO-SETTER                   -->
+    <!-- =================================================================== -->
+    <section id="tab-miner" class="hidden flex-col gap-6">
+      <div class="glass-card rounded-2xl p-6">
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
+          <div>
+            <span class="text-xs font-mono-code text-cyan-400 uppercase tracking-wider">Archive-Aware Lateral Angle Discovery</span>
+            <h1 class="text-lg font-extrabold text-white">⛏ Funda Miner &amp; Style-Calibrated Co-Setter</h1>
+            <p class="text-xs text-slate-400">Enter any topic or entity. Queries our 9-API Truth Hub, filters out overused angles from your SQLite Archive, and drafts 3 ranked circuit-style questions.</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-1.5">
+            <span class="text-[11px] text-slate-400 mr-1">Try:</span>
+            <button onclick="quickMineTopic('Alan Turing')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-indigo-600 text-[11px] text-slate-200 transition">Alan Turing</button>
+            <button onclick="quickMineTopic('Ada Lovelace')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-indigo-600 text-[11px] text-slate-200 transition">Ada Lovelace</button>
+            <button onclick="quickMineTopic('Mary Shelley')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-indigo-600 text-[11px] text-slate-200 transition">Mary Shelley</button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-3.5 items-end">
+          <div class="md:col-span-6">
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Entity, Topic, or Wikipedia Subject</label>
+            <input id="miner-topic-input" type="text" value="Alan Turing" placeholder="e.g. Alan Turing, Ada Lovelace, Mary Shelley, Satyajit Ray..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:border-cyan-500 focus:outline-none" />
+          </div>
+          <div class="md:col-span-3">
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Target Circuit Style</label>
+            <select id="miner-style-select" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-slate-100">
+              <option value="KQA Open">KQA Open</option>
+              <option value="BQC Bounce/Pounce">BQC Bounce/Pounce</option>
+              <option value="Tata Crucible Biz">Tata Crucible Biz</option>
+              <option value="Campus Fest General">Campus Fest General</option>
+            </select>
+          </div>
+          <div class="md:col-span-3">
+            <button id="btn-mine-fundae" onclick="runFundaMiner()" class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg transition">
+              ⛏ Mine Fresh Fundae
+            </button>
+          </div>
+        </div>
+
+        <div id="miner-results-container" class="mt-6 text-xs text-slate-400">
+          Click "Mine Fresh Fundae" to discover ranked, non-overused quiz angles grounded in Wikidata &amp; Wikipedia.
+        </div>
+      </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- TAB 2: INTERACTIVE LIVE POUNCE PLAYTEST SIMULATOR ("PLAY AS A TEAM")-->
+    <!-- =================================================================== -->
+    <section id="tab-playtest" class="hidden flex-col gap-6">
+      <div class="glass-card rounded-2xl p-6 max-w-5xl mx-auto w-full">
+        <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-800">
+          <div>
+            <span class="text-xs font-mono-code text-cyan-400 uppercase tracking-wider">Interactive Playtester</span>
+            <h1 class="text-lg font-extrabold text-white mt-0.5">🎯 Live Pounce vs. Bounce Table Simulator</h1>
+            <p class="text-xs text-slate-400">Step through your draft question one clue at a time like a competing team, decide when to Pounce (+10/-5), and compare your pounce window against Gemini 2.5 Flash &amp; Groq Llama-3.3-70B.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="resetPlaytestSimulator()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700">
+              ↺ Restart Playtest
+            </button>
+            <button onclick="switchTab('linter')" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white">
+              ← Back to Setter Editor
+            </button>
+          </div>
+        </div>
+
+        <div id="playtest-stage-container" class="mt-5"></div>
+      </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- TAB 3: 2-HOP KNOWLEDGE-GRAPH CONNECT WORKBENCH                      -->
+    <!-- =================================================================== -->
+    <section id="tab-connect" class="hidden flex-col gap-6">
+      <div class="glass-card rounded-2xl p-6">
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
+          <div>
+            <span class="text-xs font-mono-code text-indigo-400 uppercase tracking-wider">Wikidata + Wikipedia Graph Co-Setter</span>
+            <h1 class="text-lg font-extrabold text-white">🕸 2-Hop Knowledge-Graph Connect Round Workbench</h1>
+            <p class="text-xs text-slate-400">Enter 2–4 seed entities or a theme. Traverses Wikidata Q-IDs, Wikipedia summaries, and Dual-LLM synthesis to build a verified 4-clue progressive Connect question.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="loadConnectPreset(0)" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-indigo-950/70 hover:bg-indigo-900 text-indigo-200 border border-indigo-700/50 transition">
+              🌋 Preset 1: 1815 Mount Tambora Cascade
+            </button>
+            <button onclick="loadConnectPreset(1)" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-cyan-950/70 hover:bg-cyan-900 text-cyan-200 border border-cyan-700/50 transition">
+              🛸 Preset 2: Voyager Golden Record (1977)
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+          <div class="md:col-span-6">
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Seed Entities / Clues (comma-separated)</label>
+            <input id="connect-seeds" type="text" value="Frankenstein (Mary Shelley), The Vampyre (John Polidori), Karl Drais's Laufmaschine, J.M.W. Turner's Volcanic Sunsets" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:border-indigo-500 focus:outline-none" />
+          </div>
+          <div class="md:col-span-4">
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Hidden Connection / Theme Hint</label>
+            <input id="connect-theme" type="text" value="1815 Eruption of Mount Tambora (Year Without a Summer)" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:border-indigo-500 focus:outline-none" />
+          </div>
+          <div class="md:col-span-2">
+            <button onclick="generateConnectQuestion()" id="btn-generate-connect" class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white font-bold text-xs shadow-lg transition">
+              🔗 Synthesize Connect
+            </button>
+          </div>
+        </div>
+
+        <!-- Connect Output Display with Visual Graph Topology -->
+        <div id="connect-result-container" class="mt-6"></div>
+      </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- TAB 3.5: ROUND SET BUILDER, CROSS-SPOILER CHECK & STAGE DECK EXPORT -->
+    <!-- =================================================================== -->
+    <section id="tab-setbuilder" class="hidden flex-col gap-6">
+      <div class="glass-card rounded-2xl p-6">
+        <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-800">
+          <div>
+            <span class="text-xs font-mono-code text-emerald-400 uppercase tracking-wider">Round-Level Calibration &amp; Projector Export</span>
+            <h1 class="text-lg font-extrabold text-white mt-0.5">📋 Quiz Round Compiler &amp; Cross-Question Spoiler Detector</h1>
+            <p class="text-xs text-slate-400">Compile linted questions into a balanced tournament round, detect cross-question answer spoilers automatically, and launch a projector-ready HTML slide deck.</p>
+          </div>
+          <div class="flex items-center gap-2.5">
+            <button onclick="toggleHostConsole()" id="btn-toggle-host-console" class="px-4 py-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 text-xs font-bold transition flex items-center gap-1.5">
+              <span>🏆</span><span>Open Live Pounce/Bounce Scoreboard</span>
+            </button>
+            <a href="/api/sets/export/slides" target="_blank" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white text-xs font-bold shadow-lg transition flex items-center gap-1.5">
+              <span>🎬</span><span>Launch Projector Slide Deck ↗</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- LIVE POUNCE / BOUNCE HOST SCOREBOARD CONSOLE -->
+        <div id="host-console-panel" class="hidden mt-5 p-5 rounded-2xl bg-slate-950/90 border border-amber-500/40 animate-fade-in"></div>
+
+        <div id="set-builder-container" class="mt-5"></div>
+      </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- TAB 4: ANGLE-INDEXED QUIZ ARCHIVE EXPLORER                          -->
+    <!-- =================================================================== -->
+    <section id="tab-archive" class="hidden flex-col gap-6">
+      <div class="glass-card rounded-2xl p-6">
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
+          <div>
+            <span class="text-xs font-mono-code text-purple-400 uppercase tracking-wider">Disentangled Dual-Representation Corpus</span>
+            <h1 class="text-lg font-extrabold text-white">🗄 Angle-Indexed Competitive Quiz Archive (SQLite)</h1>
+            <p class="text-xs text-slate-400">Indexes canonical <code class="text-indigo-300">target_entity</code> separately from <code class="text-cyan-300">canonical_funda</code> angle signatures across KQA, BQC, QFI &amp; Nihilanth circuits.</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button onclick="toggleBulkImporter()" class="px-3.5 py-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/35 text-purple-200 border border-purple-500/40 text-xs font-bold transition">
+              📥 Bulk Import Quiz Set
+            </button>
+            <input id="archive-search-input" type="text" oninput="loadArchiveList()" placeholder="Search entity (e.g. Mary Shelley, Kubrick, Turing) or angle (e.g. calcified, lenses)..." class="w-72 bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-100 focus:border-indigo-500 focus:outline-none" />
+            <button onclick="loadArchiveList()" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold">
+              Search
+            </button>
+          </div>
+        </div>
+
+        <!-- COLLAPSIBLE BULK ARCHIVE IMPORTER PANEL -->
+        <div id="bulk-importer-panel" class="hidden mb-5 p-4 rounded-2xl bg-slate-950/90 border border-purple-500/40 animate-fade-in">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div>
+              <h3 class="text-sm font-bold text-purple-200">📥 Bulk Import Past Quiz Transcripts into Angle-Indexed DB</h3>
+              <p class="text-[11px] text-slate-400">Paste raw <code class="text-cyan-300">Q1: ... / Ans: ...</code> blocks (from SlideShare, Docs, or WhatsApp) or a JSON array. Automatically extracts canonical angle signatures.</p>
+            </div>
+            <button onclick="loadSampleBulkDump()" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] text-cyan-300 border border-slate-700">
+              Load Sample 2-Q Dump
+            </button>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-2.5">
+            <input id="bulk-tournament" type="text" value="Campus Fest Open Finals" placeholder="Tournament Name" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100" />
+            <input id="bulk-year" type="number" value="2025" placeholder="Year" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100" />
+            <input id="bulk-category" type="text" value="General" placeholder="Category" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100" />
+          </div>
+          <textarea id="bulk-raw-text" rows="5" placeholder="Q1: In 1938, Orson Welles terrified radio listeners with a broadcast adaptation of which H.G. Wells novel?&#10;Ans: The War of the Worlds&#10;&#10;Q2: ..." class="w-full bg-slate-900/90 border border-slate-700 rounded-xl p-3 text-xs font-mono-code text-slate-200 mb-2.5 focus:border-purple-500 focus:outline-none"></textarea>
+          <div class="flex justify-end gap-2">
+            <button onclick="toggleBulkImporter()" class="px-3 py-1.5 rounded-lg bg-slate-800 text-xs text-slate-300">Close</button>
+            <button onclick="submitBulkArchiveImport()" class="px-4 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-xs font-bold text-white shadow">
+              ⚡ Parse &amp; Index into SQLite Archive
+            </button>
+          </div>
+        </div>
+
+        <div id="archive-table-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+      </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- TAB 5: CSE ACADEMIC EVALUATION & ABLATION BENCHMARK SUITE           -->
+    <!-- =================================================================== -->
+    <section id="tab-benchmark" class="hidden flex-col gap-6">
+      <div class="glass-card rounded-2xl p-6">
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
+          <div>
+            <span class="text-xs font-mono-code text-emerald-400 uppercase tracking-wider">Empirical Capstone Evaluation</span>
+            <h1 class="text-lg font-extrabold text-white">📊 CSE Project Evaluation &amp; Diagnostic Benchmark Suite</h1>
+            <p class="text-xs text-slate-400">Runs the 4-stage pipeline across calibrated vs. flawed benchmark questions (1-Hop Search Leaks, Cook Ambiguity, Apocryphal Myths, and Archive Angle Collisions).</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="btn-run-benchmark" onclick="runAcademicBenchmark()" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white text-xs font-bold shadow-lg transition">
+              ▶ Run Full Diagnostic Benchmark (5 Suites)
+            </button>
+          </div>
+        </div>
+
+        <div id="benchmark-results-container" class="text-xs text-slate-300">
+          Click "Run Full Diagnostic Benchmark" to execute live evaluations across all 5 flaw categories and generate quantitative metrics for your CSE report.
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===================================================================== -->
+  <!-- STAGE SLIDE DECK PREVIEW & EXPORT MODAL                               -->
+  <!-- ===================================================================== -->
+  <div id="slide-preview-modal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="glass-card rounded-2xl max-w-4xl w-full p-6 border border-slate-700 shadow-2xl">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div>
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <span>🎬</span><span>Tournament Stage Slide Deck Preview</span>
+          </h3>
+          <p class="text-xs text-slate-400">Live 16:9 projection preview for KQA / BQC / Campus Finals stage presentation</p>
+        </div>
+        <button onclick="closeSlidePreviewModal()" class="text-slate-400 hover:text-white text-xl font-bold">&times;</button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5 my-5">
+        <!-- Slide 1: Question Prompt Slide -->
+        <div class="stage-slide rounded-2xl p-6 flex flex-col justify-between min-h-[270px]">
+          <div class="flex items-center justify-between border-b border-indigo-500/20 pb-2.5">
+            <span id="slide-header-style" class="text-[11px] font-mono-code font-bold uppercase tracking-widest text-indigo-300">KQA OPEN • QUESTION SLIDE</span>
+            <span id="slide-header-mode" class="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-mono-code text-[10px]">POUNCE + BOUNCE</span>
+          </div>
+          <div id="slide-question-body" class="my-4 text-sm text-slate-100 leading-relaxed font-medium"></div>
+          <div class="flex items-center justify-between text-[10px] font-mono-code text-slate-400 pt-2 border-t border-slate-800/80">
+            <span id="slide-footer-cat">Category: General</span>
+            <span id="slide-footer-cal">Calibrated by Crucible Q-Lint</span>
+          </div>
+        </div>
+
+        <!-- Slide 2: Answer Reveal & Verification Slide -->
+        <div class="stage-slide rounded-2xl p-6 flex flex-col justify-between min-h-[270px]">
+          <div class="flex items-center justify-between border-b border-emerald-500/20 pb-2.5">
+            <span class="text-[11px] font-mono-code font-bold uppercase tracking-widest text-emerald-300">ANSWER REVEAL &amp; FUNDA</span>
+            <span id="slide-reveal-score" class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono-code text-[10px]">VERIFIED</span>
+          </div>
+          <div class="my-auto py-4">
+            <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Canonical Answer</div>
+            <div id="slide-answer-main" class="text-2xl font-extrabold text-emerald-300 tracking-tight"></div>
+            <div id="slide-answer-aliases" class="text-xs text-slate-400 mt-1"></div>
+            <div id="slide-funda-notes" class="mt-4 p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-slate-300 leading-relaxed"></div>
+          </div>
+          <div class="flex items-center justify-between text-[10px] font-mono-code text-slate-400 pt-2 border-t border-slate-800/80">
+            <span id="slide-wikidata-id">Wikidata Grounded</span>
+            <span>Multi-API Fact Checked ✓</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-800">
+        <div class="text-xs text-slate-400">Export formatted question &amp; diagnostic metadata:</div>
+        <div class="flex items-center gap-2.5">
+          <button onclick="copyQuestionMarkdown()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700">
+            📋 Copy Markdown Slide
+          </button>
+          <button onclick="exportDiagnosticJson()" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white">
+            ⬇ Export Full JSON Report
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- API KEYS & FEDERATED TRUTH HUB MODAL                                  -->
+  <!-- ===================================================================== -->
+  <div id="settings-modal" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="glass-card rounded-2xl max-w-2xl w-full p-6 border border-slate-700 shadow-2xl">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div>
+          <h3 class="text-base font-bold text-white">Dual-Engine LLM (Groq + Gemini) &amp; Federated Truth APIs</h3>
+          <p class="text-xs text-slate-400">Configure API keys for live Dual-LLM ensembling. Keys are saved locally to <code class="text-indigo-300">.env</code>.</p>
+        </div>
+        <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-white text-lg font-bold">&times;</button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
+        <div class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800">
+          <label class="block text-xs font-semibold text-indigo-300 mb-1">Google Gemini API Key</label>
+          <input id="modal-gemini-key" type="password" placeholder="AIzaSy... (leave blank to keep existing)" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 mb-2" />
+          <label class="block text-[11px] text-slate-400 mb-1">Gemini Model</label>
+          <input id="modal-gemini-model" type="text" value="gemini-2.5-flash" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs font-mono-code text-slate-200" />
+        </div>
+
+        <div class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800">
+          <label class="block text-xs font-semibold text-cyan-300 mb-1">Groq Cloud LPU API Key</label>
+          <input id="modal-groq-key" type="password" placeholder="gsk_... (leave blank to keep existing)" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 mb-2" />
+          <label class="block text-[11px] text-slate-400 mb-1">Groq Primary Model</label>
+          <input id="modal-groq-model" type="text" value="llama-3.3-70b-versatile" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs font-mono-code text-slate-200" />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
+          <label class="block text-xs font-semibold text-emerald-300 mb-1">Optional: Tavily AI Search Key</label>
+          <input id="modal-tavily-key" type="password" placeholder="tvly-... (optional)" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100" />
+        </div>
+        <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
+          <label class="block text-xs font-semibold text-emerald-300 mb-1">Optional: Serper Google SERP Key</label>
+          <input id="modal-serper-key" type="password" placeholder="serper key... (optional)" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100" />
+        </div>
+      </div>
+
+      <!-- Active Truth-Finding APIs Directory -->
+      <div class="mb-4">
+        <div class="text-xs font-semibold text-slate-300 mb-2">Federated Truth-Finding Hub Status (9 Knowledge &amp; Search APIs)</div>
+        <div id="modal-truth-apis-grid" class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]"></div>
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+        <button onclick="closeSettingsModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs text-slate-300">Cancel</button>
+        <button onclick="saveApiKeys()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white">Save &amp; Activate Keys</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FLOATING TOAST NOTIFICATION CONTAINER -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none"></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

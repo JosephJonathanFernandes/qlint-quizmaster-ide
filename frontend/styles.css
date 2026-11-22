@@ -1,0 +1,188 @@
+/* Crucible // Q-Lint — Ultra-Craft Dark Setter IDE Design System */
+:root {
+  --bg-canvas: #060911;
+  --bg-surface: #0c1220;
+  --bg-elevated: #121a2d;
+  --bg-glass: rgba(16, 23, 41, 0.82);
+  --border-hairline: rgba(148, 163, 184, 0.13);
+  --border-glow: rgba(99, 102, 241, 0.38);
+  --accent-indigo: #6366f1;
+  --accent-cyan: #06b6d4;
+  --accent-emerald: #10b981;
+  --accent-amber: #f59e0b;
+  --accent-rose: #f43f5e;
+  --accent-purple: #a855f7;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--bg-canvas);
+  background-image:
+    radial-gradient(at 12% 8%, rgba(99, 102, 241, 0.13) 0px, transparent 45%),
+    radial-gradient(at 88% 12%, rgba(6, 182, 212, 0.10) 0px, transparent 45%),
+    radial-gradient(at 50% 90%, rgba(168, 85, 247, 0.07) 0px, transparent 50%);
+  background-attachment: fixed;
+  color: #f1f5f9;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  overflow-x: hidden;
+  letter-spacing: -0.01em;
+}
+
+.font-mono-code {
+  font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  letter-spacing: -0.02em;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #070b14;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* Elevated Glass Cards */
+.glass-card {
+  background: linear-gradient(160deg, rgba(19, 28, 49, 0.88) 0%, rgba(11, 17, 30, 0.94) 100%);
+  border: 1px solid var(--border-hairline);
+  box-shadow:
+    0 14px 36px -12px rgba(0, 0, 0, 0.65),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(16px);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.glass-card:hover {
+  border-color: rgba(148, 163, 184, 0.22);
+}
+
+.glass-card-interactive {
+  background: linear-gradient(160deg, rgba(22, 32, 56, 0.78) 0%, rgba(12, 18, 32, 0.9) 100%);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.glass-card-interactive:hover {
+  transform: translateY(-1px);
+  border-color: rgba(99, 102, 241, 0.45);
+  box-shadow: 0 8px 25px -6px rgba(99, 102, 241, 0.2);
+}
+
+/* Preset Chip Active State */
+.preset-chip {
+  transition: all 0.16s ease;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  background: rgba(15, 23, 42, 0.75);
+}
+.preset-chip:hover {
+  border-color: rgba(99, 102, 241, 0.5);
+  background: rgba(30, 41, 59, 0.8);
+}
+.preset-chip.active {
+  border-color: #6366f1;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.22), rgba(6, 182, 212, 0.14));
+  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.35), 0 6px 18px -4px rgba(99, 102, 241, 0.25);
+}
+
+/* Inline Linter Span Highlights */
+.hl-leak {
+  background: rgba(244, 63, 94, 0.18);
+  border-bottom: 2px wavy #f43f5e;
+  color: #fecdd3;
+  padding: 1px 5px;
+  border-radius: 4px;
+  cursor: help;
+  transition: background 0.15s;
+}
+.hl-leak:hover {
+  background: rgba(244, 63, 94, 0.32);
+}
+
+.hl-myth {
+  background: rgba(245, 158, 11, 0.20);
+  border-bottom: 2px dashed #f59e0b;
+  color: #fde68a;
+  padding: 1px 5px;
+  border-radius: 4px;
+  cursor: help;
+  transition: background 0.15s;
+}
+.hl-myth:hover {
+  background: rgba(245, 158, 11, 0.34);
+}
+
+.hl-verified {
+  background: rgba(16, 185, 129, 0.13);
+  border-bottom: 2px solid #10b981;
+  color: #a7f3d0;
+  padding: 1px 5px;
+  border-radius: 4px;
+  cursor: help;
+  transition: background 0.15s;
+}
+.hl-verified:hover {
+  background: rgba(16, 185, 129, 0.26);
+}
+
+/* Variable X / Y pill highlight in Slide Preview */
+.var-pill {
+  display: inline-block;
+  padding: 0 7px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #6366f1, #06b6d4);
+  color: #ffffff;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
+}
+
+/* Pulse & Shimmer Animations */
+.pulse-dot {
+  animation: pulseGlow 2.2s infinite;
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(1.22); }
+}
+
+@keyframes fadeInSlide {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeInSlide 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Keyboard Shortcut KBD tag */
+.kbd-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 5px;
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  color: #94a3b8;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+}
+
+/* Stage Slide Presentation Card */
+.stage-slide {
+  background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.16), rgba(9, 13, 24, 0.98) 70%);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  box-shadow: 0 20px 50px -15px rgba(0, 0, 0, 0.85);
+}
