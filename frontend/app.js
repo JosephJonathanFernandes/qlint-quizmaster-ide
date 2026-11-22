@@ -74,12 +74,16 @@ async function initApp() {
 
 function setupKeyboardShortcuts() {
   window.addEventListener("keydown", (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+      e.preventDefault();
+      openCommandPalette();
+    } else if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
       e.preventDefault();
       runDiagnosticLinter();
     } else if (e.key === "Escape") {
       closeSettingsModal();
       closeSlidePreviewModal();
+      closeCommandPalette();
     }
   });
 }
@@ -631,7 +635,28 @@ function renderWorkabilityFunnel(work) {
             )
             .join("")}
         </div>
-        <div class="text-[11px] text-slate-300">${escapeHtml(evData.summary)}</div>
+        <div class="text-[11px] text-slate-300 mb-2">${escapeHtml(evData.summary)}</div>
+        ${
+          evData.floor_crack_prediction
+            ? `
+          <div class="mt-1.5">
+            <div class="flex justify-between text-[10px] font-mono-code text-slate-400 mb-1">
+              <span>100-Team Floor Prediction:</span>
+              <span>
+                <strong class="text-amber-300">Pounce ${evData.floor_crack_prediction.pounce_crack_pct}%</strong> •
+                <strong class="text-emerald-300">Bounce ${evData.floor_crack_prediction.bounce_crack_pct}%</strong> •
+                <strong class="text-slate-400">Pass ${evData.floor_crack_prediction.unanswered_pct}%</strong>
+              </span>
+            </div>
+            <div class="w-full h-2 rounded-full overflow-hidden flex bg-slate-950">
+              <div class="bg-amber-400 h-full" style="width:${evData.floor_crack_prediction.pounce_crack_pct}%"></div>
+              <div class="bg-emerald-500 h-full" style="width:${evData.floor_crack_prediction.bounce_crack_pct}%"></div>
+              <div class="bg-slate-700 h-full" style="width:${evData.floor_crack_prediction.unanswered_pct}%"></div>
+            </div>
+          </div>
+        `
+            : ""
+        }
       </div>`
     : "";
 
@@ -2838,6 +2863,73 @@ function exportBenchmarkCsv() {
   a.click();
   URL.revokeObjectURL(url);
   showToast("Exported CSE Benchmark results to CSV!", "success");
+}
+
+// ============================================================================
+// CTRL+K SPOTLIGHT COMMAND PALETTE
+// ============================================================================
+const COMMAND_REGISTRY = [
+  { label: "⚡ Run 4-Stage Diagnostic Linter", cat: "Action", fn: () => { switchTab("linter"); runDiagnosticLinter(); } },
+  { label: "🧪 Run LOCO Keystone Stress Test & Implicit Leak Audit", cat: "Action", fn: () => { switchTab("linter"); runLocoStressTest(); } },
+  { label: "🛡 Autofix: De-Googleify 1-Hop Search Leaks", cat: "Autofix", fn: () => { switchTab("linter"); triggerAutofix("DE_GOOGLEIFY"); } },
+  { label: "🔒 Autofix: Block Adversarial Cook Risk", cat: "Autofix", fn: () => { switchTab("linter"); triggerAutofix("BLOCK_COOK"); } },
+  { label: "📚 Autofix: Fix Apocryphal Urban Legend Myth", cat: "Autofix", fn: () => { switchTab("linter"); triggerAutofix("FIX_MYTH"); } },
+  { label: "🔊 Stage Mic Read-Aloud Test (Web Speech TTS)", cat: "Stage", fn: () => { switchTab("linter"); toggleSpeechPreview(); } },
+  { label: "🎬 Preview 16:9 Stage Slide Deck", cat: "Export", fn: () => openSlidePreviewModal() },
+  { label: "⛏ Open Funda Miner & Style-Calibrated Co-Setter", cat: "Tab", fn: () => switchTab("miner") },
+  { label: "🎯 Open Live Pounce vs. Bounce Table Simulator", cat: "Tab", fn: () => switchTab("playtest") },
+  { label: "🕸 Open 2-Hop Knowledge-Graph Connect Builder", cat: "Tab", fn: () => switchTab("connect") },
+  { label: "📋 Open Round Builder, Host Scoreboard & Prelims PDF", cat: "Tab", fn: () => switchTab("setbuilder") },
+  { label: "🗄 Open Angle-Indexed SQLite Archive & Bulk Importer", cat: "Tab", fn: () => switchTab("archive") },
+  { label: "📊 Open CSE Evaluation Benchmark & LaTeX Exporter", cat: "Tab", fn: () => switchTab("benchmark") },
+  { label: "⚙ Configure Groq & Gemini API Keys / Live Ping Test", cat: "Settings", fn: () => openSettingsModal() },
+];
+
+function openCommandPalette() {
+  const modal = document.getElementById("command-palette-modal");
+  const inp = document.getElementById("cmd-palette-input");
+  if (!modal) return;
+  modal.classList.remove("hidden");
+  if (inp) {
+    inp.value = "";
+    setTimeout(() => inp.focus(), 30);
+  }
+  renderCommandPaletteList();
+}
+
+function closeCommandPalette() {
+  const modal = document.getElementById("command-palette-modal");
+  if (modal) modal.classList.add("hidden");
+}
+
+function renderCommandPaletteList() {
+  const list = document.getElementById("cmd-palette-list");
+  const q = (document.getElementById("cmd-palette-input")?.value || "").trim().toLowerCase();
+  if (!list) return;
+  const filtered = COMMAND_REGISTRY.filter(
+    (c) => !q || c.label.toLowerCase().includes(q) || c.cat.toLowerCase().includes(q)
+  );
+  list.innerHTML = filtered.length
+    ? filtered
+        .map((c) => {
+          const origIdx = COMMAND_REGISTRY.indexOf(c);
+          return `
+          <button onclick="executeCommandByIndex(${origIdx})" class="w-full text-left px-3 py-2.5 rounded-xl hover:bg-indigo-600/25 border border-transparent hover:border-indigo-500/40 flex items-center justify-between text-xs text-slate-100 transition">
+            <span>${escapeHtml(c.label)}</span>
+            <span class="font-mono-code text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">${escapeHtml(
+              c.cat
+            )}</span>
+          </button>
+        `;
+        })
+        .join("")
+    : `<div class="p-4 text-center text-xs text-slate-500">No matching commands found.</div>`;
+}
+
+function executeCommandByIndex(idx) {
+  const cmd = COMMAND_REGISTRY[idx];
+  closeCommandPalette();
+  if (cmd && cmd.fn) cmd.fn();
 }
 
 window.addEventListener("DOMContentLoaded", initApp);

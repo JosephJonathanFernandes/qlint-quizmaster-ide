@@ -72,4 +72,30 @@ def compute_pounce_ev_profile(
         "economy_verdict": verdict,
         "summary": summary,
         "step_evs": step_evs,
+        "floor_crack_prediction": simulate_floor_crack_distribution(ablation_steps),
+    }
+
+
+def simulate_floor_crack_distribution(ablation_steps: List[AblationStep]) -> Dict[str, Any]:
+    """Predict expected 100-team tournament floor outcome (Pounce %, Bounce %, Unanswered %)."""
+    if not ablation_steps:
+        return {"pounce_crack_pct": 0, "bounce_crack_pct": 0, "unanswered_pct": 100}
+
+    # Pre-final clue consensus drives Pounce crack rate; final clue consensus drives total crack rate
+    pre_final_p = (
+        max(s.consensus_confidence for s in ablation_steps[:-1])
+        if len(ablation_steps) >= 2
+        else ablation_steps[0].consensus_confidence * 0.6
+    )
+    final_p = ablation_steps[-1].consensus_confidence
+
+    pounce_pct = int(round(min(92, max(4, pre_final_p * 82))))
+    total_crack_pct = int(round(min(97, max(pounce_pct + 5, final_p * 95))))
+    bounce_pct = max(0, total_crack_pct - pounce_pct)
+    unanswered_pct = max(0, 100 - pounce_pct - bounce_pct)
+
+    return {
+        "pounce_crack_pct": pounce_pct,
+        "bounce_crack_pct": bounce_pct,
+        "unanswered_pct": unanswered_pct,
     }

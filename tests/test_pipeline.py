@@ -296,6 +296,8 @@ def test_game_theoretic_pounce_ev_analysis():
     assert ev["breakeven_probability_pct"] == 33.3
     assert len(ev["step_evs"]) == len(diag.workability.ablation_steps)
     assert any(s["rational_to_pounce"] for s in ev["step_evs"])
+    floor = ev["floor_crack_prediction"]
+    assert floor["pounce_crack_pct"] + floor["bounce_crack_pct"] + floor["unanswered_pct"] == 100
 
 
 
