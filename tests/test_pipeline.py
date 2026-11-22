@@ -171,5 +171,27 @@ def test_funda_miner_ranks_fresh_angles_above_archive_overused():
     assert any(a["archive_freshness"] == "ARCHIVE_OVERUSED" for a in angles)
 
 
+def test_visual_clue_linter_catches_filename_and_exif_leaks():
+    """Verify Module 5 Visual Linter detects both filename and binary EXIF/PNG metadata answer leaks."""
+    import base64
+    from backend.visual_linter import lint_visual_clue
+
+    raw_bytes = b"\x89PNG\r\n\x1a\nEXIF_ARTIST:Mary Shelley Portrait Getty Images 1840"
+    b64 = base64.b64encode(raw_bytes).decode("ascii")
+    res = _run(
+        lint_visual_clue(
+            image_b64=b64,
+            filename="mary_shelley_portrait.png",
+            mime_type="image/png",
+            target_answer="Mary Shelley",
+        )
+    )
+    assert len(res["metadata_scan"]["filename_leaks"]) >= 1
+    assert len(res["metadata_scan"]["metadata_leaks"]) >= 1
+    assert "getty" in res["metadata_scan"]["detected_software_or_stock_tags"]
+    assert res["visual_safety_score"] < 50
+
+
+
 
 

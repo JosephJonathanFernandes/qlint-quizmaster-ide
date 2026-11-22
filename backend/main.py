@@ -29,6 +29,7 @@ from backend.linter_pipeline import (
 from backend.archive_engine import archive_engine
 from backend.set_manager import set_manager
 from backend.funda_miner import mine_quiz_angles
+from backend.visual_linter import lint_visual_clue
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
@@ -109,6 +110,18 @@ async def mine_fundae_endpoint(payload: Dict[str, Any]) -> Dict[str, Any]:
     return await mine_quiz_angles(
         topic=str(payload.get("topic", "Alan Turing")),
         quiz_style=str(payload.get("quiz_style", "KQA Open")),
+    )
+
+
+@app.post("/api/lint-visual")
+async def lint_visual_endpoint(payload: Dict[str, Any]) -> Dict[str, Any]:
+    return await lint_visual_clue(
+        image_b64=str(payload.get("image_b64", "")),
+        filename=str(payload.get("filename", "slide_image.png")),
+        mime_type=str(payload.get("mime_type", "image/png")),
+        target_answer=str(payload.get("target_answer", "")),
+        aliases=payload.get("aliases", []),
+        question_context=str(payload.get("question_context", "")),
     )
 
 

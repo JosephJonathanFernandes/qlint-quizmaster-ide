@@ -464,6 +464,36 @@
             <div id="fresh-angles-container" class="mt-3"></div>
           </div>
 
+          <!-- =============================================================== -->
+          <!-- MODULE 5: VISUAL / IMAGE-CLUE LINTER (EXIF + GEMINI VISION)     -->
+          <!-- =============================================================== -->
+          <div class="glass-card rounded-2xl p-5">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <div>
+                <h2 class="text-sm font-bold text-white flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded-full bg-indigo-400"></span>
+                  MODULE 5: Visual / Image-Clue Linter (EXIF Spoiler Scan + Gemini Vision)
+                </h2>
+                <p class="text-[11px] text-slate-400">Upload a slide image to scan for filename/EXIF metadata leaks, projector resolution issues, and visible watermarks/text spoilers</p>
+              </div>
+              <button onclick="runSampleVisualSpoilerDemo()" class="px-2.5 py-1 rounded-lg bg-indigo-950/70 hover:bg-indigo-900 text-indigo-200 border border-indigo-700/50 text-[11px] font-semibold transition">
+                🧪 Demo EXIF/Filename Leak
+              </button>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-3 mb-3">
+              <label class="flex-1 cursor-pointer p-3.5 rounded-xl bg-slate-950/80 border border-dashed border-slate-700 hover:border-indigo-400 transition flex items-center justify-center gap-2 text-xs text-slate-300">
+                <span>🖼</span>
+                <span>Click to upload Visual Clue image (PNG / JPG / WEBP)</span>
+                <input id="visual-file-input" type="file" accept="image/*" onchange="handleVisualFileUpload(event)" class="hidden" />
+              </label>
+            </div>
+
+            <div id="visual-linter-results" class="text-xs text-slate-400">
+              Upload a slide image or click "Demo EXIF/Filename Leak" to run binary metadata &amp; Gemini Multimodal Vision inspection.
+            </div>
+          </div>
+
         </div>
       </div>
     </section>

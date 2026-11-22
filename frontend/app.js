@@ -2133,4 +2133,134 @@ async function runFundaMiner() {
   }
 }
 
+// ============================================================================
+// MODULE 5: VISUAL / IMAGE-CLUE LINTER (EXIF SCANNER + GEMINI MULTIMODAL)
+// ============================================================================
+function handleVisualFileUpload(event) {
+  const file = event.target?.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    executeVisualLinter(reader.result, file.name, file.type || "image/png");
+  };
+  reader.readAsDataURL(file);
+}
+
+function runSampleVisualSpoilerDemo() {
+  const target = (document.getElementById("input-answer")?.value || "Mary Shelley").trim();
+  const safeSlug = target.toLowerCase().replace(/[^a-z0-9]+/g, "_");
+  // Build a valid minimal binary payload with embedded PNG tEXt spoiler metadata for live demo
+  const syntheticMeta = `PNG\r\n\x1a\nEXIF_ARTIST:${target} Wikimedia Commons Getty Images Portrait 1840`;
+  const b64 = btoa(syntheticMeta);
+  executeVisualLinter(`data:image/png;base64,${b64}`, `${safeSlug}_portrait_final.png`, "image/png");
+}
+
+async function executeVisualLinter(imageB64, filename, mimeType) {
+  const container = document.getElementById("visual-linter-results");
+  const target_answer = (document.getElementById("input-answer")?.value || "").trim();
+  const aliases = (document.getElementById("input-aliases")?.value || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const question_context = (document.getElementById("input-question")?.value || "").trim();
+
+  container.innerHTML = `<div class="p-3 text-indigo-300">Scanning binary EXIF/PNG metadata &amp; running Multimodal Vision Linter on "${escapeHtml(
+    filename
+  )}"...</div>`;
+
+  try {
+    const res = await fetch("/api/lint-visual", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        image_b64: imageB64,
+        filename,
+        mime_type: mimeType,
+        target_answer,
+        aliases,
+        question_context,
+      }),
+    });
+    const data = await res.json();
+    const meta = data.metadata_scan || {};
+    const vis = data.vision_analysis || {};
+    const hasMetaLeak =
+      (meta.filename_leaks && meta.filename_leaks.length > 0) ||
+      (meta.metadata_leaks && meta.metadata_leaks.length > 0);
+
+    container.innerHTML = `
+      <div class="p-3.5 rounded-xl bg-slate-900/90 border ${
+        hasMetaLeak ? "border-rose-500/60" : "border-emerald-500/40"
+      } flex flex-col gap-2.5 animate-fade-in">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 rounded font-mono-code text-xs font-bold ${
+              data.visual_safety_score >= 75
+                ? "bg-emerald-500/20 text-emerald-300"
+                : "bg-rose-500/20 text-rose-300"
+            }">Visual Safety: ${data.visual_safety_score}/100</span>
+            <span class="font-mono-code text-[11px] text-slate-300">${escapeHtml(
+              data.projector_verdict
+            )}</span>
+          </div>
+          <span class="font-mono-code text-[10px] text-cyan-400">${escapeHtml(
+            data.engine_used
+          )} (${data.latency_ms}ms)</span>
+        </div>
+
+        ${
+          hasMetaLeak
+            ? `<div class="p-2.5 rounded-lg bg-rose-950/60 border border-rose-500/50 text-rose-200 text-[11px]">
+                <strong>🚨 SPOILER LEAK IN IMAGE FILE!</strong><br/>
+                ${
+                  meta.filename_leaks?.length
+                    ? `• Filename <code>${escapeHtml(
+                        meta.filename
+                      )}</code> exposes token(s): <strong>${escapeHtml(
+                        meta.filename_leaks.join(", ")
+                      )}</strong><br/>`
+                    : ""
+                }
+                ${
+                  meta.metadata_leaks?.length
+                    ? `• Binary EXIF/PNG header contains: <code>${escapeHtml(
+                        meta.metadata_leaks[0].raw_metadata_snippet
+                      )}</code>`
+                    : ""
+                }
+              </div>`
+            : `<div class="p-2 rounded-lg bg-emerald-950/40 border border-emerald-700/40 text-emerald-300 text-[11px]">✓ Filename &amp; embedded binary EXIF/PNG metadata are clean of answer leaks.</div>`
+        }
+
+        <div class="text-xs text-slate-200">
+          <strong>Vision Verdict:</strong> ${escapeHtml(vis.visual_workability_verdict || "")}
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+          <div class="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800">
+            <div class="font-semibold text-amber-300 mb-1">Watermarks / OCR Findings</div>
+            ${(vis.visible_text_or_watermark_spoilers || [])
+              .map((s) => `<div class="text-slate-300">• ${escapeHtml(s)}</div>`)
+              .join("")}
+          </div>
+          <div class="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800">
+            <div class="font-semibold text-cyan-300 mb-1">Cropping &amp; Sanitization Steps</div>
+            ${(vis.cropping_or_blur_instructions || [])
+              .map((s) => `<div class="text-slate-300">• ${escapeHtml(s)}</div>`)
+              .join("")}
+          </div>
+        </div>
+      </div>
+    `;
+    showToast(
+      hasMetaLeak
+        ? "Visual Linter caught a Filename / EXIF Metadata spoiler leak!"
+        : "Visual Linter scan complete!",
+      hasMetaLeak ? "warning" : "success"
+    );
+  } catch (e) {
+    container.textContent = "Visual linting failed.";
+  }
+}
+
 window.addEventListener("DOMContentLoaded", initApp);
