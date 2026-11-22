@@ -365,10 +365,18 @@
                 </h2>
                 <p class="text-[11px] text-slate-400">Progressive blinded solving across Gemini 2.5 Flash (Veteran) + Groq Llama-3.3-70B (Lateral) + Groq Llama-3.1-8B (Campus)</p>
               </div>
-              <span id="difficulty-tier-badge" class="px-2.5 py-1 rounded-lg text-xs font-mono-code font-semibold bg-cyan-950/70 text-cyan-300 border border-cyan-700/50">
-                --
-              </span>
+              <div class="flex items-center gap-2">
+                <button id="btn-loco-stress" onclick="runLocoStressTest()" class="px-2.5 py-1 rounded-lg bg-purple-950/70 hover:bg-purple-900 text-purple-200 border border-purple-700/50 text-[11px] font-semibold transition">
+                  🧪 LOCO Stress Test
+                </button>
+                <span id="difficulty-tier-badge" class="px-2.5 py-1 rounded-lg text-xs font-mono-code font-semibold bg-cyan-950/70 text-cyan-300 border border-cyan-700/50">
+                  --
+                </span>
+              </div>
             </div>
+
+            <!-- Leave-One-Clue-Out (LOCO) & Implicit Linguistic Leak Results Panel -->
+            <div id="loco-stress-panel" class="hidden mb-4 p-3.5 rounded-xl bg-slate-950/90 border border-purple-500/40 text-xs animate-fade-in"></div>
 
             <!-- Interactive Shannon Entropy SVG Decay Curve + Pounce Diagnosis -->
             <div class="grid grid-cols-1 md:grid-cols-12 gap-4 mb-4">
@@ -769,7 +777,13 @@
             <h1 class="text-lg font-extrabold text-white">📊 CSE Project Evaluation &amp; Diagnostic Benchmark Suite</h1>
             <p class="text-xs text-slate-400">Runs the 4-stage pipeline across calibrated vs. flawed benchmark questions (1-Hop Search Leaks, Cook Ambiguity, Apocryphal Myths, and Archive Angle Collisions).</p>
           </div>
-          <div class="flex items-center gap-2">
+          <div class="flex flex-wrap items-center gap-2">
+            <button onclick="copyBenchmarkLatex()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-slate-700 text-xs font-semibold transition">
+              📋 Copy LaTeX Table
+            </button>
+            <button onclick="exportBenchmarkCsv()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 text-xs font-semibold transition">
+              ⬇ Export CSV
+            </button>
             <button id="btn-run-benchmark" onclick="runAcademicBenchmark()" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white text-xs font-bold shadow-lg transition">
               ▶ Run Full Diagnostic Benchmark (5 Suites)
             </button>

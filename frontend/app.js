@@ -13,6 +13,7 @@ let ACTIVE_PRESET_ID = "";
 let CURRENT_ROUND_NAME = "KQA Open Finals — Round 1";
 let IS_SPEAKING_MIC = false;
 let VERSION_SNAPSHOTS = [];
+let LAST_BENCHMARK_DATA = null;
 
 // Playtest simulator state
 let PLAYTEST_STATE = {
@@ -1459,6 +1460,7 @@ async function runAcademicBenchmark() {
   try {
     const res = await fetch("/api/benchmark/run", { method: "POST" });
     const data = await res.json();
+    LAST_BENCHMARK_DATA = data;
 
     container.innerHTML = `
       <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-5 animate-fade-in">
@@ -2657,6 +2659,155 @@ async function testLiveApiConnections() {
   } finally {
     if (btn) btn.disabled = false;
   }
+}
+
+// ============================================================================
+// LEAVE-ONE-CLUE-OUT (LOCO) STRESS TEST & LATEX/CSV BENCHMARK EXPORTERS
+// ============================================================================
+async function runLocoStressTest() {
+  const question_text = (document.getElementById("input-question")?.value || "").trim();
+  const target_answer = (document.getElementById("input-answer")?.value || "").trim();
+  const panel = document.getElementById("loco-stress-panel");
+  const btn = document.getElementById("btn-loco-stress");
+  if (!question_text || !target_answer || !panel) return;
+
+  const aliases = (document.getElementById("input-aliases")?.value || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  panel.classList.remove("hidden");
+  panel.innerHTML = `<div class="text-purple-300">Running Leave-One-Clue-Out (LOCO) Keystone Ablation &amp; Implicit Linguistic Leak Audit...</div>`;
+  if (btn) btn.disabled = true;
+
+  try {
+    const res = await fetch("/api/stress-test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        question_text,
+        target_answer,
+        acceptable_aliases: aliases,
+      }),
+    });
+    const data = await res.json();
+
+    const locoCards = (data.loco_ablation || [])
+      .map((item) => {
+        const isKeystone = item.clue_importance === "KEYSTONE_LOAD_BEARING";
+        return `
+        <div class="p-2.5 rounded-lg bg-slate-900/90 border ${
+          isKeystone ? "border-purple-500/60" : "border-slate-800"
+        }">
+          <div class="flex items-center justify-between gap-1 mb-1">
+            <span class="font-mono-code font-bold text-indigo-300">Drop ${escapeHtml(
+              item.dropped_clue_id
+            )}</span>
+            <span class="px-1.5 py-0.5 rounded font-mono-code text-[9.5px] ${
+              isKeystone
+                ? "bg-purple-500/20 text-purple-300"
+                : "bg-slate-800 text-slate-300"
+            }">${escapeHtml(item.clue_importance)}</span>
+          </div>
+          <div class="text-[10.5px] text-slate-400 mb-1 truncate">"${escapeHtml(
+            item.dropped_excerpt
+          )}"</div>
+          <div class="text-[10.5px] font-mono-code ${
+            item.still_solvable_without_clue ? "text-emerald-300" : "text-rose-300"
+          }">
+            ${
+              item.still_solvable_without_clue ? "Still solvable" : "Collapses!"
+            } (ΔConf: -${Math.round(item.confidence_drop * 100)}%)
+          </div>
+        </div>
+      `;
+      })
+      .join("");
+
+    const leaks = data.linguistic_audit?.leaks || [];
+    const leaksHtml = leaks.length
+      ? leaks
+          .map(
+            (l) => `
+          <div class="p-2 rounded-lg bg-amber-950/35 border border-amber-700/40 text-[11px] text-amber-200">
+            <strong>[${escapeHtml(l.type)}]</strong> ${escapeHtml(l.detail)}
+            <div class="text-slate-300 mt-0.5">→ ${escapeHtml(l.fix)}</div>
+          </div>
+        `
+          )
+          .join("")
+      : `<div class="text-emerald-300 text-[11px]">✓ Zero implicit linguistic leaks (gendered pronouns, year clustering, or verbatim quotes).</div>`;
+
+    panel.innerHTML = `
+      <div class="flex items-center justify-between mb-2">
+        <span class="font-bold text-purple-300">🧪 LOCO Keystone Ablation &amp; Implicit Linguistic Audit (${data.latency_ms}ms)</span>
+        <span class="font-mono-code text-[11px] text-cyan-300">Keystone Clue: ${escapeHtml(
+          data.keystone_clue_id
+        )}</span>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">${locoCards}</div>
+      <div class="flex flex-col gap-1.5">${leaksHtml}</div>
+    `;
+    showToast(`LOCO Stress Test complete — Keystone clue is ${data.keystone_clue_id}!`, "success");
+  } catch (e) {
+    panel.textContent = "Stress test failed.";
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+function copyBenchmarkLatex() {
+  if (!LAST_BENCHMARK_DATA || !LAST_BENCHMARK_DATA.cases) {
+    showToast("Run the CSE Benchmark first before copying the LaTeX table.", "warning");
+    return;
+  }
+  const rows = LAST_BENCHMARK_DATA.cases
+    .map(
+      (c, i) =>
+        `  Case ${i + 1} (${c.target_answer}) & ${c.workability_score} & ${c.google_resistance} & ${c.uniqueness_score} & ${c.factual_integrity} & ${c.originality_score} & ${
+          c.passed_detection ? "\\checkmark" : "\\times"
+        } \\\\`
+    )
+    .join("\n");
+
+  const latex =
+    "\\begin{table}[t]\n" +
+    "\\centering\n" +
+    "\\caption{Crucible (Q-Lint) Empirical Flaw Detection & Sub-Score Benchmark}\n" +
+    "\\begin{tabular}{lcccccc}\n" +
+    "\\hline\n" +
+    "\\textbf{Benchmark Case} & \\textbf{Work} & \\textbf{Search} & \\textbf{Cook} & \\textbf{Truth} & \\textbf{Fresh} & \\textbf{Pass} \\\\\n" +
+    "\\hline\n" +
+    rows +
+    "\n\\hline\n" +
+    `\\multicolumn{7}{l}{Overall Flaw Detection Accuracy: ${LAST_BENCHMARK_DATA.detection_accuracy_pct}\\% (${LAST_BENCHMARK_DATA.passed_cases}/${LAST_BENCHMARK_DATA.total_cases})} \\\\\n` +
+    "\\end{tabular}\n" +
+    "\\end{table}\n";
+
+  navigator.clipboard?.writeText(latex);
+  showToast("Copied IEEE/ACM LaTeX evaluation table to clipboard!", "success");
+}
+
+function exportBenchmarkCsv() {
+  if (!LAST_BENCHMARK_DATA || !LAST_BENCHMARK_DATA.cases) {
+    showToast("Run the CSE Benchmark first before exporting CSV.", "warning");
+    return;
+  }
+  const header = "id,target_answer,expected_condition,detected_verdict,overall_score,workability,google_resistance,uniqueness,factual_integrity,originality,passed\n";
+  const body = LAST_BENCHMARK_DATA.cases
+    .map(
+      (c) =>
+        `"${c.id}","${c.target_answer}","${c.expected_condition}","${c.detected_verdict}",${c.overall_score},${c.workability_score},${c.google_resistance},${c.uniqueness_score},${c.factual_integrity},${c.originality_score},${c.passed_detection}`
+    )
+    .join("\n");
+  const blob = new Blob([header + body], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `crucible-cse-benchmark-${Date.now()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast("Exported CSE Benchmark results to CSV!", "success");
 }
 
 window.addEventListener("DOMContentLoaded", initApp);

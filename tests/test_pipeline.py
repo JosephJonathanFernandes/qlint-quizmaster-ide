@@ -272,6 +272,21 @@ def test_api_connection_ping_endpoint():
     assert any("Truth Hub" in s for s in services)
 
 
+def test_loco_stress_test_and_implicit_linguistic_leak_audit():
+    """Verify Leave-One-Clue-Out (LOCO) Keystone Ablation and Implicit Linguistic Leak detection."""
+    from backend.stress_tester import run_question_stress_test
+
+    preset = PRESET_QUESTIONS[0]  # Mary Shelley (has 'her' gendered pronoun + 3 years + 3 clues)
+    req = QuestionAnalyzeRequest(**preset)
+    res = _run(run_question_stress_test(req))
+    assert res["clue_count"] >= 2
+    assert len(res["loco_ablation"]) >= 2
+    assert res["linguistic_audit"]["implicit_leak_count"] >= 1
+    leak_types = [l["type"] for l in res["linguistic_audit"]["leaks"]]
+    assert "GENDER_PRONOUN_LEAK" in leak_types
+
+
+
 
 
 

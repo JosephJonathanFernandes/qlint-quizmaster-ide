@@ -31,6 +31,7 @@ from backend.set_manager import set_manager
 from backend.funda_miner import mine_quiz_angles
 from backend.visual_linter import lint_visual_clue
 from backend.answer_grader import batch_grade_prelims_answers, expand_entity_aliases
+from backend.stress_tester import run_question_stress_test
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
@@ -141,6 +142,11 @@ async def get_presets() -> Dict[str, Any]:
 @app.post("/api/analyze", response_model=QuestionDiagnosticResponse)
 async def analyze_question(req: QuestionAnalyzeRequest) -> QuestionDiagnosticResponse:
     return await run_full_diagnostic_pipeline(req)
+
+
+@app.post("/api/stress-test")
+async def stress_test_question(req: QuestionAnalyzeRequest) -> Dict[str, Any]:
+    return await run_question_stress_test(req)
 
 
 @app.post("/api/autofix", response_model=AutofixResponse)
