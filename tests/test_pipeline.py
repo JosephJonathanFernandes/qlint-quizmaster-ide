@@ -322,6 +322,13 @@ def test_ab_variant_comparator_and_workspace_backup_export():
     assert ws["archive_count"] >= 20
     assert ws["rounds_count"] >= 1
 
+    from backend.main import import_full_workspace
+
+    restore_res = _run(import_full_workspace(ws))
+    assert restore_res["status"] == "restored"
+    assert restore_res["imported_rounds"] >= 1
+    assert restore_res["imported_round_questions"] == 0  # Idempotent: no duplicate round questions added
+
 
 
 

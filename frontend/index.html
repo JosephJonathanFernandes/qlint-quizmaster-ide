@@ -691,6 +691,10 @@
             <button onclick="exportFullWorkspaceJson()" title="Download portable backup of all rounds and archive questions" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-emerald-300 border border-slate-700 transition">
               💾 Backup JSON
             </button>
+            <label title="Restore/merge rounds and archive from a Crucible JSON backup" class="cursor-pointer px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-cyan-300 border border-slate-700 transition">
+              📂 Restore JSON
+              <input type="file" accept=".json,application/json" onchange="handleWorkspaceImportFile(event)" class="hidden" />
+            </label>
           </div>
         </div>
 
@@ -803,6 +807,22 @@
     </section>
 
   </main>
+
+  <!-- IDE STATUS FOOTER BAR -->
+  <footer class="border-t border-slate-800/70 bg-slate-950/80 px-5 py-2.5 text-[11px] font-mono-code text-slate-400">
+    <div class="max-w-[1640px] mx-auto flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center gap-3">
+        <span class="text-slate-300 font-semibold">CRUCIBLE // Q-LINT v2.0</span>
+        <span>•</span>
+        <a href="/docs" target="_blank" class="text-indigo-400 hover:text-indigo-300 hover:underline">OpenAPI Swagger Docs (/docs) ↗</a>
+      </div>
+      <div class="flex flex-wrap items-center gap-3">
+        <span><kbd class="kbd-tag">Ctrl</kbd>+<kbd class="kbd-tag">K</kbd> Command Palette</span>
+        <span><kbd class="kbd-tag">Ctrl</kbd>+<kbd class="kbd-tag">Enter</kbd> Compile &amp; Lint</span>
+        <span><kbd class="kbd-tag">Esc</kbd> Close Modal</span>
+      </div>
+    </div>
+  </footer>
 
   <!-- ===================================================================== -->
   <!-- STAGE SLIDE DECK PREVIEW & EXPORT MODAL                               -->

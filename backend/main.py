@@ -245,6 +245,44 @@ async def export_full_workspace() -> Dict[str, Any]:
     }
 
 
+@app.post("/api/workspace/import")
+async def import_full_workspace(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Restore/merge archive questions and quiz rounds from a crucible-qlint-workspace-v1 JSON bundle."""
+    imported_archive = 0
+    imported_rounds = 0
+    imported_round_qs = 0
+
+    for item in payload.get("archive", []):
+        if isinstance(item, dict) and item.get("question_excerpt") and item.get("target_answer"):
+            archive_engine.add_question(item)
+            imported_archive += 1
+
+    for rnd in payload.get("rounds", []):
+        if not isinstance(rnd, dict) or not rnd.get("set_name"):
+            continue
+        set_name = str(rnd["set_name"]).strip()
+        set_manager.create_round(set_name)
+        imported_rounds += 1
+        existing_texts = {
+            q["question_text"].strip().lower()
+            for q in set_manager.get_set_questions(set_name)
+        }
+        for q in rnd.get("questions", []):
+            if not isinstance(q, dict) or not q.get("question_text") or not q.get("target_answer"):
+                continue
+            if q["question_text"].strip().lower() not in existing_texts:
+                set_manager.add_question_to_set({**q, "set_name": set_name})
+                existing_texts.add(q["question_text"].strip().lower())
+                imported_round_qs += 1
+
+    return {
+        "status": "restored",
+        "imported_archive": imported_archive,
+        "imported_rounds": imported_rounds,
+        "imported_round_questions": imported_round_qs,
+    }
+
+
 @app.post("/api/autofix", response_model=AutofixResponse)
 async def autofix_draft(req: AutofixRequest) -> AutofixResponse:
     return await autofix_question(req)

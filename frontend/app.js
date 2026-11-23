@@ -3069,4 +3069,29 @@ async function exportFullWorkspaceJson() {
   }
 }
 
+function handleWorkspaceImportFile(event) {
+  const file = event.target?.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async () => {
+    try {
+      const parsed = JSON.parse(reader.result);
+      const res = await fetch("/api/workspace/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(parsed),
+      });
+      const data = await res.json();
+      showToast(
+        `Restored ${data.imported_rounds} round(s), ${data.imported_round_questions} new round Qs & ${data.imported_archive} archive entries!`,
+        "success"
+      );
+      await Promise.all([loadArchiveList(), loadRoundSet()]);
+    } catch (e) {
+      showToast("Invalid Crucible workspace JSON file.", "error");
+    }
+  };
+  reader.readAsText(file);
+}
+
 window.addEventListener("DOMContentLoaded", initApp);
