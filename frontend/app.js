@@ -2019,7 +2019,65 @@ let HOST_STATE = {
     { name: "Team 6 (Zeta)", score: 0 },
   ],
   history: [],
+  timerSec: 0,
+  timerInterval: null,
 };
+
+function playStageBuzzerChime() {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(440, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(220, ctx.currentTime + 0.45);
+    gain.gain.setValueAtTime(0.18, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.5);
+  } catch (e) {}
+}
+
+function startHostTimer(seconds) {
+  if (HOST_STATE.timerInterval) clearInterval(HOST_STATE.timerInterval);
+  HOST_STATE.timerSec = seconds;
+  const updateDisplay = () => {
+    const el = document.getElementById("host-timer-display");
+    if (el) {
+      el.textContent = `${HOST_STATE.timerSec}s`;
+      el.className =
+        HOST_STATE.timerSec <= 5
+          ? "px-2.5 py-1 rounded-lg font-mono-code text-xs font-extrabold bg-rose-500/25 text-rose-300 border border-rose-500/60"
+          : "px-2.5 py-1 rounded-lg font-mono-code text-xs font-extrabold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40";
+    }
+  };
+  updateDisplay();
+  HOST_STATE.timerInterval = setInterval(() => {
+    HOST_STATE.timerSec -= 1;
+    if (HOST_STATE.timerSec <= 0) {
+      HOST_STATE.timerSec = 0;
+      clearInterval(HOST_STATE.timerInterval);
+      HOST_STATE.timerInterval = null;
+      playStageBuzzerChime();
+      showToast("⏱ Time's up! Stage buzzer sounded.", "warning");
+    }
+    updateDisplay();
+  }, 1000);
+}
+
+function stopHostTimer() {
+  if (HOST_STATE.timerInterval) {
+    clearInterval(HOST_STATE.timerInterval);
+    HOST_STATE.timerInterval = null;
+  }
+  HOST_STATE.timerSec = 0;
+  const el = document.getElementById("host-timer-display");
+  if (el) el.textContent = "0s";
+}
 
 async function toggleHostConsole() {
   const panel = document.getElementById("host-console-panel");
@@ -2109,7 +2167,13 @@ function renderHostConsole() {
     HOST_STATE.teams[HOST_STATE.directTeamIdx].name
   )}</strong></div>
       </div>
-      <div class="flex items-center gap-2">
+      <div class="flex flex-wrap items-center gap-2">
+        <span id="host-timer-display" class="px-2.5 py-1 rounded-lg font-mono-code text-xs font-extrabold bg-slate-800 text-cyan-300 border border-slate-700">${
+          HOST_STATE.timerSec
+        }s</span>
+        <button onclick="startHostTimer(30)" class="px-2 py-1.5 rounded-lg bg-cyan-950/70 hover:bg-cyan-900 text-[11px] font-semibold text-cyan-200 border border-cyan-700/50">⏱ 30s Pounce</button>
+        <button onclick="startHostTimer(15)" class="px-2 py-1.5 rounded-lg bg-indigo-950/70 hover:bg-indigo-900 text-[11px] font-semibold text-indigo-200 border border-indigo-700/50">⏱ 15s Bounce</button>
+        <button onclick="stopHostTimer()" class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] text-slate-300 border border-slate-700">⏹</button>
         <button onclick="hostUndoLast()" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] text-amber-300 border border-slate-700">↶ Undo</button>
         <button onclick="hostNextQuestion(-1)" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] text-slate-200 border border-slate-700">← Prev Q</button>
         <button onclick="hostNextQuestion(1)" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-[11px] font-bold text-white">Next Q &amp; Rotate Direct →</button>
