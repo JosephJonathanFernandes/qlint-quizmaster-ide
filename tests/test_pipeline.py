@@ -358,6 +358,23 @@ def test_difficulty_recalibration_harder_and_easier():
     assert len(easier.changes_made) >= 1
 
 
+def test_list_it_bidding_round_verifier():
+    """Verify List-It Round Verifier checks cardinality, catches duplicates, and expands item aliases."""
+    from backend.list_it_engine import verify_list_it_round
+
+    res = _run(
+        verify_list_it_round(
+            prompt="Name the individuals who have won the Nobel Prize twice.",
+            items=["Marie Curie", "Linus Pauling", "John Bardeen", "Marie Curie", "Frederick Sanger"],
+        )
+    )
+    assert res["cardinality"] == 4
+    assert "Marie Curie" in res["duplicates_found"]
+    assert len(res["verified_items"]) == 4
+    assert len(res["boundary_warnings"]) >= 1
+
+
+
 
 
 

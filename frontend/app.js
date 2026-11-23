@@ -3096,4 +3096,91 @@ function handleWorkspaceImportFile(event) {
   reader.readAsText(file);
 }
 
+// ============================================================================
+// LIST-IT / BIDDING ROUND VERIFIER & ALIAS BUILDER
+// ============================================================================
+async function loadListItPreset(idx) {
+  try {
+    const res = await fetch("/api/list-it/presets");
+    const data = await res.json();
+    const p = (data.presets || [])[idx];
+    if (!p) return;
+    document.getElementById("listit-prompt").value = p.prompt;
+    document.getElementById("listit-items").value = (p.items || []).join(", ");
+    runListItVerifier();
+  } catch (e) {
+    showToast("Could not load List-It preset.", "error");
+  }
+}
+
+async function runListItVerifier() {
+  const prompt = (document.getElementById("listit-prompt")?.value || "").trim();
+  const items = (document.getElementById("listit-items")?.value || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const out = document.getElementById("listit-results-container");
+  const btn = document.getElementById("btn-verify-listit");
+  if (!prompt || !items.length) {
+    showToast("Enter a List-It prompt and comma-separated items.", "warning");
+    return;
+  }
+
+  if (btn) btn.disabled = true;
+  out.innerHTML = `<div class="p-3 text-amber-300 text-xs">Auditing list cardinality, boundary edge cases, and Wikidata aliases...</div>`;
+
+  try {
+    const res = await fetch("/api/list-it/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt, items }),
+    });
+    const data = await res.json();
+
+    const itemCards = (data.verified_items || [])
+      .map(
+        (it) => `
+      <div class="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800">
+        <div class="text-xs font-bold text-emerald-300">#${it.index} ${escapeHtml(it.canonical_item)}</div>
+        <div class="text-[10px] text-slate-400 mt-0.5">Aliases: ${escapeHtml(
+          (it.acceptable_aliases || []).join(", ") || "Exact match"
+        )}</div>
+      </div>
+    `
+      )
+      .join("");
+
+    out.innerHTML = `
+      <div class="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 flex flex-col gap-3 animate-fade-in">
+        <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-800">
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono-code text-xs font-bold">
+              List Safety: ${data.list_safety_score}/100
+            </span>
+            <span class="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-mono-code text-xs">
+              Cardinality: ${data.cardinality} items • Bidding Par: ${escapeHtml(data.recommended_bidding_par)}
+            </span>
+          </div>
+          <span class="text-[10px] font-mono-code text-slate-400">${escapeHtml(data.engine_used)}</span>
+        </div>
+
+        <div class="p-3 rounded-xl bg-amber-950/35 border border-amber-700/40 text-xs text-amber-200">
+          <div class="font-bold text-amber-300 mb-1">⚠ Boundary &amp; Arbitration Notes:</div>
+          ${(data.boundary_warnings || []).map((w) => `<div>• ${escapeHtml(w)}</div>`).join("")}
+          <div class="text-slate-300 mt-1.5"><strong>Suggested Scope Clause:</strong> ${escapeHtml(
+            data.disambiguation_clause
+          )}</div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">${itemCards}</div>
+      </div>
+    `;
+    showToast(`Verified ${data.cardinality}-item List-It round (Par: ${data.recommended_bidding_par})!`, "success");
+  } catch (e) {
+    out.textContent = "List-It verification failed.";
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
 window.addEventListener("DOMContentLoaded", initApp);

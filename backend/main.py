@@ -32,6 +32,7 @@ from backend.funda_miner import mine_quiz_angles
 from backend.visual_linter import lint_visual_clue
 from backend.answer_grader import batch_grade_prelims_answers, expand_entity_aliases
 from backend.stress_tester import run_question_stress_test
+from backend.list_it_engine import verify_list_it_round, LIST_IT_PRESETS
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
@@ -291,6 +292,20 @@ async def autofix_draft(req: AutofixRequest) -> AutofixResponse:
 @app.post("/api/connect/generate", response_model=ConnectGenerateResponse)
 async def generate_connect(req: ConnectGenerateRequest) -> ConnectGenerateResponse:
     return await generate_connect_round(req)
+
+
+@app.get("/api/list-it/presets")
+async def get_list_it_presets() -> Dict[str, Any]:
+    return {"presets": LIST_IT_PRESETS}
+
+
+@app.post("/api/list-it/verify")
+async def verify_list_it_endpoint(payload: Dict[str, Any]) -> Dict[str, Any]:
+    return await verify_list_it_round(
+        prompt=str(payload.get("prompt", "")),
+        items=payload.get("items", []),
+        quiz_style=str(payload.get("quiz_style", "KQA Open List-It")),
+    )
 
 
 @app.post("/api/mine-fundae")
