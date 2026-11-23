@@ -330,6 +330,35 @@ def test_ab_variant_comparator_and_workspace_backup_export():
     assert restore_res["imported_round_questions"] == 0  # Idempotent: no duplicate round questions added
 
 
+def test_difficulty_recalibration_harder_and_easier():
+    """Verify Difficulty Re-Calibrator transforms drafts for KQA Finals (harder) vs Campus Prelims (easier)."""
+    base_text = PRESET_QUESTIONS[0]["question_text"]
+    harder = _run(
+        autofix_question(
+            AutofixRequest(
+                question_text=base_text,
+                target_answer="Mary Shelley",
+                fix_type="CALIBRATE_HARDER",
+            )
+        )
+    )
+    assert harder.rewritten_text != base_text
+    assert "Fantasmagoriana" not in harder.rewritten_text
+
+    easier = _run(
+        autofix_question(
+            AutofixRequest(
+                question_text=base_text,
+                target_answer="Mary Shelley",
+                fix_type="CALIBRATE_EASIER",
+            )
+        )
+    )
+    assert easier.rewritten_text != base_text
+    assert len(easier.changes_made) >= 1
+
+
+
 
 
 

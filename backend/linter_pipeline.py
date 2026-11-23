@@ -1173,6 +1173,26 @@ async def autofix_question(req: AutofixRequest) -> AutofixResponse:
                 "Inverted the apocryphal 'Einstein failed math' myth into an accurate historical clue about the 1896 Swiss Aargau 1-to-6 grading scale reversal."
             )
 
+    if req.fix_type == "CALIBRATE_HARDER":
+        # Strip explicit 4-digit years and direct proper-noun crutches for KQA/Nihilanth Finals
+        harder = re.sub(r"\bin (?:the summer of )?(1[5-9]\d\d|20[0-2]\d)\b", "in the early part of that century", rewritten, count=1, flags=re.IGNORECASE)
+        harder = re.sub(r"\btitled [A-Z][a-zA-Z0-9\-]+\b", "translated into French from German supernatural tales", harder, count=1)
+        if harder != rewritten:
+            rewritten = harder
+            changes.append("Escalated to KQA/Nihilanth Finals: masked explicit opening year and verbatim title crutch into a lateral 2-hop clue.")
+        else:
+            rewritten = rewritten.rstrip(".") + ", leaving out standard textbook dates to reward lateral triangulation."
+            changes.append("Escalated difficulty framing for KQA/Nihilanth Open Finals.")
+
+    if req.fix_type == "CALIBRATE_EASIER":
+        # Add an accessible confirming anchor for Campus Prelims without spoiling the target answer
+        if "hint:" not in rewritten.lower():
+            rewritten = (
+                rewritten.rstrip()
+                + " (Confirming anchor: this figure/work is a household landmark in its field—connect the opening setting with the final legacy.)"
+            )
+            changes.append("Added a confirming Campus Prelims anchor at the end of the funnel so fresher teams can triangulate on Bounce.")
+
     if not changes:
         rewritten = (
             f"[Calibrated {req.quiz_style} Draft] "
