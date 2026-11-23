@@ -300,6 +300,30 @@ def test_game_theoretic_pounce_ev_analysis():
     assert floor["pounce_crack_pct"] + floor["bounce_crack_pct"] + floor["unanswered_pct"] == 100
 
 
+def test_ab_variant_comparator_and_workspace_backup_export():
+    """Verify A/B Variant Comparator crowns the disambiguated draft over the cook-prone draft, and workspace export works."""
+    from backend.main import ABCompareRequest, compare_ab_variants, export_full_workspace
+
+    draft_a = QuestionAnalyzeRequest(**PRESET_QUESTIONS[1])  # Cook-prone Villa Diodati draft
+    draft_b = QuestionAnalyzeRequest(
+        question_text=(
+            "During an 1814 journey down the Rhine, teenager X stopped near Darmstadt—a few miles from a hilltop "
+            "fortress where alchemist Johann Konrad Dippel distilled an elixir of life. Two years later by Lake "
+            "Geneva, X won a ghost-story contest at age eighteen and published a debut novel subtitled 'The Modern Prometheus'. Identify X."
+        ),
+        target_answer="Mary Shelley",
+    )
+    ab_res = _run(compare_ab_variants(ABCompareRequest(draft_a=draft_a, draft_b=draft_b)))
+    assert ab_res["winner"] == "DRAFT_B"
+    assert len(ab_res["metrics"]) == 6
+
+    ws = _run(export_full_workspace())
+    assert ws["format"] == "crucible-qlint-workspace-v1"
+    assert ws["archive_count"] >= 20
+    assert ws["rounds_count"] >= 1
+
+
+
 
 
 

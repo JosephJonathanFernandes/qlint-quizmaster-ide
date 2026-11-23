@@ -84,6 +84,7 @@ function setupKeyboardShortcuts() {
       closeSettingsModal();
       closeSlidePreviewModal();
       closeCommandPalette();
+      closeABCompareModal();
     }
   });
 }
@@ -2870,6 +2871,7 @@ function exportBenchmarkCsv() {
 // ============================================================================
 const COMMAND_REGISTRY = [
   { label: "⚡ Run 4-Stage Diagnostic Linter", cat: "Action", fn: () => { switchTab("linter"); runDiagnosticLinter(); } },
+  { label: "⚖ Open Side-by-Side A/B Question Variant Comparator", cat: "Action", fn: () => openABCompareModal() },
   { label: "🧪 Run LOCO Keystone Stress Test & Implicit Leak Audit", cat: "Action", fn: () => { switchTab("linter"); runLocoStressTest(); } },
   { label: "🛡 Autofix: De-Googleify 1-Hop Search Leaks", cat: "Autofix", fn: () => { switchTab("linter"); triggerAutofix("DE_GOOGLEIFY"); } },
   { label: "🔒 Autofix: Block Adversarial Cook Risk", cat: "Autofix", fn: () => { switchTab("linter"); triggerAutofix("BLOCK_COOK"); } },
@@ -2930,6 +2932,141 @@ function executeCommandByIndex(idx) {
   const cmd = COMMAND_REGISTRY[idx];
   closeCommandPalette();
   if (cmd && cmd.fn) cmd.fn();
+}
+
+// ============================================================================
+// SIDE-BY-SIDE A/B VARIANT COMPARATOR & WORKSPACE BACKUP EXPORTER
+// ============================================================================
+function openABCompareModal() {
+  const modal = document.getElementById("ab-compare-modal");
+  if (!modal) return;
+  document.getElementById("ab-draft-a").value = (document.getElementById("input-question")?.value || "").trim();
+  document.getElementById("ab-target-answer").value = (document.getElementById("input-answer")?.value || "").trim();
+  if (!document.getElementById("ab-draft-b").value.trim()) {
+    loadSampleABComparison(false);
+  }
+  modal.classList.remove("hidden");
+}
+
+function closeABCompareModal() {
+  const modal = document.getElementById("ab-compare-modal");
+  if (modal) modal.classList.add("hidden");
+}
+
+function loadSampleABComparison(overwriteA = true) {
+  if (overwriteA) {
+    document.getElementById("ab-draft-a").value =
+      "During the volcanically darkened 'Year Without a Summer' of 1816, this Romantic-era writer stayed at Villa Diodati overlooking Lake Geneva. Inspired by late-night discussions of galvanism and supernatural folklore, this author penned a landmark gothic work that forever defined an iconic undead archetype in Western pop culture. Identify this author.";
+    document.getElementById("ab-target-answer").value = "Mary Shelley";
+  }
+  document.getElementById("ab-draft-b").value =
+    "During an 1814 journey down the Rhine, teenager X stopped near Darmstadt—a few miles from a hilltop fortress where 17th-century alchemist Johann Konrad Dippel had distilled an animal-bone elixir of life. Two years later by Lake Geneva, X won a ghost-story contest at age eighteen and published a debut novel subtitled 'The Modern Prometheus'. Identify X.";
+}
+
+async function runABComparison() {
+  const draftA = (document.getElementById("ab-draft-a")?.value || "").trim();
+  const draftB = (document.getElementById("ab-draft-b")?.value || "").trim();
+  const ans = (document.getElementById("ab-target-answer")?.value || "").trim();
+  const out = document.getElementById("ab-compare-results");
+  const btn = document.getElementById("btn-run-ab");
+  if (!draftA || !draftB || !ans) {
+    showToast("Provide Draft A, Draft B, and a shared Target Answer.", "warning");
+    return;
+  }
+
+  if (btn) btn.disabled = true;
+  out.innerHTML = `<div class="p-4 text-center text-indigo-300">Running 4-Stage Diagnostic Pipeline concurrently on Draft A and Draft B...</div>`;
+
+  try {
+    const res = await fetch("/api/compare-ab", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        draft_a: { question_text: draftA, target_answer: ans },
+        draft_b: { question_text: draftB, target_answer: ans },
+      }),
+    });
+    const data = await res.json();
+
+    const rowsHtml = (data.metrics || [])
+      .map((m) => {
+        const d = m.delta_b_minus_a;
+        const deltaStr = d > 0 ? `+${d} (B)` : d < 0 ? `+${Math.abs(d)} (A)` : "Tie";
+        const deltaCls = d > 0 ? "text-cyan-300" : d < 0 ? "text-indigo-300" : "text-slate-400";
+        return `
+        <tr class="border-b border-slate-800/70">
+          <td class="py-2 px-3 font-semibold text-slate-200">${escapeHtml(m.metric)}</td>
+          <td class="py-2 px-3 font-mono-code text-indigo-300">${m.a}/100</td>
+          <td class="py-2 px-3 font-mono-code text-cyan-300">${m.b}/100</td>
+          <td class="py-2 px-3 font-mono-code font-bold ${deltaCls}">${deltaStr}</td>
+        </tr>
+      `;
+      })
+      .join("");
+
+    out.innerHTML = `
+      <div class="p-4 rounded-xl bg-slate-900/90 border border-emerald-500/40 mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono-code text-[11px] font-bold">WINNER: ${escapeHtml(
+            data.winner
+          )}</span>
+          <div class="text-xs text-slate-200 mt-1">${escapeHtml(data.recommendation)}</div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="adoptABDraft('A')" class="px-3 py-1.5 rounded-lg bg-indigo-950 hover:bg-indigo-800 text-indigo-200 border border-indigo-700/50 text-[11px] font-semibold">Adopt Draft A</button>
+          <button onclick="adoptABDraft('B')" class="px-3 py-1.5 rounded-lg bg-cyan-950 hover:bg-cyan-800 text-cyan-200 border border-cyan-700/50 text-[11px] font-semibold">Adopt Draft B</button>
+        </div>
+      </div>
+
+      <table class="w-full text-left border-collapse text-xs">
+        <thead>
+          <tr class="border-b border-slate-800 text-[10px] uppercase text-slate-400">
+            <th class="py-2 px-3">Diagnostic Dimension</th>
+            <th class="py-2 px-3">Draft A (${escapeHtml(data.verdict_a)})</th>
+            <th class="py-2 px-3">Draft B (${escapeHtml(data.verdict_b)})</th>
+            <th class="py-2 px-3">Edge</th>
+          </tr>
+        </thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+    `;
+    showToast(`A/B Comparison complete: ${data.winner} wins!`, "success");
+  } catch (e) {
+    out.textContent = "A/B comparison failed.";
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+function adoptABDraft(which) {
+  const txt = document.getElementById(which === "A" ? "ab-draft-a" : "ab-draft-b").value.trim();
+  const ans = document.getElementById("ab-target-answer").value.trim();
+  document.getElementById("input-question").value = txt;
+  document.getElementById("input-answer").value = ans;
+  updateWordCount();
+  closeABCompareModal();
+  showToast(`Adopted Draft ${which} into Setter Editor!`, "success");
+  runDiagnosticLinter();
+}
+
+async function exportFullWorkspaceJson() {
+  try {
+    const res = await fetch("/api/workspace/export");
+    const data = await res.json();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `crucible-workspace-backup-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast(
+      `Exported portable workspace backup (${data.archive_count} archive Qs, ${data.rounds_count} rounds)!`,
+      "success"
+    );
+  } catch (e) {
+    showToast("Workspace export failed.", "error");
+  }
 }
 
 window.addEventListener("DOMContentLoaded", initApp);

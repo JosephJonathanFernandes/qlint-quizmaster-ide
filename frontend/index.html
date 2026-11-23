@@ -122,14 +122,14 @@
                 <h2 class="text-xs font-bold uppercase tracking-wider text-slate-200">Setter Question Compiler</h2>
               </div>
               <div class="flex items-center gap-1.5">
+                <button onclick="openABCompareModal()" title="Compare two competing drafts side-by-side" class="px-2 py-1 rounded-md bg-purple-950/70 hover:bg-purple-900 text-[11px] text-purple-200 border border-purple-700/50 transition">
+                  ⚖ A/B Compare
+                </button>
                 <button id="btn-mic-preview" onclick="toggleSpeechPreview()" title="Listen to how this question sounds read aloud on a stage mic" class="px-2 py-1 rounded-md bg-cyan-950/70 hover:bg-cyan-900 text-[11px] text-cyan-200 border border-cyan-700/50 transition">
                   🔊 Mic Test
                 </button>
                 <button onclick="openSlidePreviewModal()" class="px-2 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-[11px] text-indigo-300 border border-slate-700 transition">
                   🎬 Stage Slide
-                </button>
-                <button onclick="copyQuestionMarkdown()" class="px-2 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-[11px] text-slate-300 border border-slate-700 transition">
-                  📋 Copy MD
                 </button>
               </div>
             </div>
@@ -684,9 +684,12 @@
             </select>
           </div>
           <div class="flex items-center gap-2">
-            <input id="new-round-name-input" type="text" placeholder="New round name (e.g. Written Prelims Set A)..." class="w-64 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:border-indigo-500 focus:outline-none" />
+            <input id="new-round-name-input" type="text" placeholder="New round name (e.g. Written Prelims Set A)..." class="w-56 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:border-indigo-500 focus:outline-none" />
             <button onclick="createNewQuizRound()" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white transition">
               + Create Round
+            </button>
+            <button onclick="exportFullWorkspaceJson()" title="Download portable backup of all rounds and archive questions" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-emerald-300 border border-slate-700 transition">
+              💾 Backup JSON
             </button>
           </div>
         </div>
@@ -919,6 +922,53 @@
           <button onclick="closeSettingsModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs text-slate-300">Cancel</button>
           <button onclick="saveApiKeys()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white">Save &amp; Activate Keys</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- SIDE-BY-SIDE A/B QUESTION VARIANT COMPARATOR MODAL                    -->
+  <!-- ===================================================================== -->
+  <div id="ab-compare-modal" onclick="if(event.target===this) closeABCompareModal()" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="glass-card rounded-2xl max-w-5xl w-full p-6 border border-purple-500/40 shadow-2xl max-h-[92vh] overflow-y-auto animate-fade-in">
+      <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-800 mb-4">
+        <div>
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <span>⚖</span><span>Side-by-Side A/B Question Variant Comparator</span>
+          </h3>
+          <p class="text-xs text-slate-400">Settle co-setter debates with data: concurrently runs the 4-stage linter on Draft A vs. Draft B and crowns the stronger tournament question.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="loadSampleABComparison()" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] text-cyan-300 border border-slate-700">
+            Load Sample A vs. B
+          </button>
+          <button onclick="closeABCompareModal()" class="text-slate-400 hover:text-white text-xl font-bold">&times;</button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-xs font-bold text-indigo-300 mb-1">Draft A (Co-Setter 1 / Current Editor)</label>
+          <textarea id="ab-draft-a" rows="4" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-slate-100 focus:border-indigo-500 focus:outline-none"></textarea>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-cyan-300 mb-1">Draft B (Co-Setter 2 / Alternate Framing)</label>
+          <textarea id="ab-draft-b" rows="4" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-slate-100 focus:border-cyan-500 focus:outline-none"></textarea>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div class="flex items-center gap-2">
+          <label class="text-xs text-slate-400">Shared Target Answer:</label>
+          <input id="ab-target-answer" type="text" class="bg-slate-950 border border-emerald-700/60 rounded-lg px-3 py-1.5 text-xs font-bold text-emerald-300" />
+        </div>
+        <button id="btn-run-ab" onclick="runABComparison()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold shadow-lg transition">
+          ⚖ Run Head-to-Head Diagnostics
+        </button>
+      </div>
+
+      <div id="ab-compare-results" class="text-xs text-slate-400">
+        Enter two competing drafts for the same answer (or click "Load Sample A vs. B") and run head-to-head diagnostics.
       </div>
     </div>
   </div>

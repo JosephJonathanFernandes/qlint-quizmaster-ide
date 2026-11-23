@@ -149,6 +149,102 @@ async def stress_test_question(req: QuestionAnalyzeRequest) -> Dict[str, Any]:
     return await run_question_stress_test(req)
 
 
+class ABCompareRequest(BaseModel):
+    draft_a: QuestionAnalyzeRequest
+    draft_b: QuestionAnalyzeRequest
+
+
+@app.post("/api/compare-ab")
+async def compare_ab_variants(payload: ABCompareRequest) -> Dict[str, Any]:
+    """Run the 4-stage diagnostic pipeline concurrently on Draft A and Draft B for head-to-head comparison."""
+    import asyncio
+
+    diag_a, diag_b = await asyncio.gather(
+        run_full_diagnostic_pipeline(payload.draft_a),
+        run_full_diagnostic_pipeline(payload.draft_b),
+    )
+
+    score_a = diag_a.overall_quality_score
+    score_b = diag_b.overall_quality_score
+    winner = "DRAFT_A" if score_a > score_b else ("DRAFT_B" if score_b > score_a else "TIE")
+
+    metrics = [
+        {
+            "metric": "Overall Quality",
+            "a": score_a,
+            "b": score_b,
+            "delta_b_minus_a": score_b - score_a,
+        },
+        {
+            "metric": "Workability Funnel",
+            "a": diag_a.workability.workability_score,
+            "b": diag_b.workability.workability_score,
+            "delta_b_minus_a": diag_b.workability.workability_score - diag_a.workability.workability_score,
+        },
+        {
+            "metric": "Google Resistance",
+            "a": diag_a.uniqueness_googleability.google_resistance_score,
+            "b": diag_b.uniqueness_googleability.google_resistance_score,
+            "delta_b_minus_a": diag_b.uniqueness_googleability.google_resistance_score
+            - diag_a.uniqueness_googleability.google_resistance_score,
+        },
+        {
+            "metric": "Cook Safety (Uniqueness)",
+            "a": diag_a.uniqueness_googleability.uniqueness_score,
+            "b": diag_b.uniqueness_googleability.uniqueness_score,
+            "delta_b_minus_a": diag_b.uniqueness_googleability.uniqueness_score
+            - diag_a.uniqueness_googleability.uniqueness_score,
+        },
+        {
+            "metric": "Factual Integrity",
+            "a": diag_a.truth_verification.factual_integrity_score,
+            "b": diag_b.truth_verification.factual_integrity_score,
+            "delta_b_minus_a": diag_b.truth_verification.factual_integrity_score
+            - diag_a.truth_verification.factual_integrity_score,
+        },
+        {
+            "metric": "Angle Freshness",
+            "a": diag_a.archive_dedup.originality_score,
+            "b": diag_b.archive_dedup.originality_score,
+            "delta_b_minus_a": diag_b.archive_dedup.originality_score - diag_a.archive_dedup.originality_score,
+        },
+    ]
+
+    return {
+        "winner": winner,
+        "score_delta": abs(score_b - score_a),
+        "verdict_a": diag_a.verdict_badge,
+        "verdict_b": diag_b.verdict_badge,
+        "entropy_a": [s.shannon_entropy_bits for s in diag_a.workability.ablation_steps],
+        "entropy_b": [s.shannon_entropy_bits for s in diag_b.workability.ablation_steps],
+        "metrics": metrics,
+        "recommendation": (
+            f"Draft B wins by +{score_b - score_a} pts ({diag_b.verdict_badge} vs. {diag_a.verdict_badge})."
+            if winner == "DRAFT_B"
+            else (
+                f"Draft A wins by +{score_a - score_b} pts ({diag_a.verdict_badge} vs. {diag_b.verdict_badge})."
+                if winner == "DRAFT_A"
+                else "Both drafts tied on overall quality; inspect sub-metrics for circuit preference."
+            )
+        ),
+    }
+
+
+@app.get("/api/workspace/export")
+async def export_full_workspace() -> Dict[str, Any]:
+    """Export all archive questions and all compiled quiz rounds as a portable JSON bundle."""
+    archive_items = archive_engine.list_questions()
+    rounds = set_manager.list_sets()
+    rounds_detail = [set_manager.analyze_set(r["set_name"]) for r in rounds]
+    return {
+        "format": "crucible-qlint-workspace-v1",
+        "archive_count": len(archive_items),
+        "rounds_count": len(rounds_detail),
+        "archive": archive_items,
+        "rounds": rounds_detail,
+    }
+
+
 @app.post("/api/autofix", response_model=AutofixResponse)
 async def autofix_draft(req: AutofixRequest) -> AutofixResponse:
     return await autofix_question(req)
