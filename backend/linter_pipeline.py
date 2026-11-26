@@ -1044,8 +1044,12 @@ async def run_full_diagnostic_pipeline(
         )
 
     from backend.game_theory import compute_pounce_ev_profile
+    from backend.variable_linter import audit_variable_bindings
 
     pounce_ev = compute_pounce_ev_profile(work_rep.ablation_steps)
+    var_lint = audit_variable_bindings(req.question_text, req.target_answer)
+    if var_lint["status"] != "CLEAN_BINDING":
+        overall_score = max(15, overall_score - 8)
 
     style_critique = {
         "target_style": req.quiz_style,
@@ -1058,6 +1062,7 @@ async def run_full_diagnostic_pipeline(
             else "Compact prompt; consider expanding into a 3-part narrative funnel for Pounce + Bounce."
         ),
         "pounce_ev_analysis": pounce_ev,
+        "variable_lint": var_lint,
     }
 
     total_gem_ms = round(w_gem + u_gem + t_gem, 1)

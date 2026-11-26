@@ -374,6 +374,49 @@ def test_list_it_bidding_round_verifier():
     assert len(res["boundary_warnings"]) >= 1
 
 
+def test_native_pptx_slide_deck_exporter():
+    """Verify zero-dependency .pptx exporter produces a valid OOXML ZIP presentation."""
+    import io
+    import zipfile
+    from backend.main import export_set_pptx
+
+    resp = _run(export_set_pptx())
+    assert resp.media_type == "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+    with zipfile.ZipFile(io.BytesIO(resp.body), "r") as zf:
+        names = zf.namelist()
+        assert "[Content_Types].xml" in names
+        assert "ppt/presentation.xml" in names
+        assert "ppt/slides/slide1.xml" in names
+        slide_texts = "".join(
+            zf.read(n).decode("utf-8") for n in names if n.startswith("ppt/slides/slide") and n.endswith(".xml")
+        )
+        assert "Stanley Kubrick" in slide_texts
+
+
+def test_variable_binding_static_linter():
+    """Verify compiler-style X/Y/Z variable binding linter catches orphan vars and cardinality mismatches."""
+    from backend.variable_linter import audit_variable_bindings
+
+    # 1. Clean binding even when containing 'X-ray'
+    clean = audit_variable_bindings(
+        "Using X-ray diffraction at King's College, X captured Photo 51 in 1952. Identify X.",
+        "Rosalind Franklin",
+    )
+    assert clean["status"] == "CLEAN_BINDING"
+    assert clean["prompt_vars"] == ["X"]
+
+    # 2. Orphan prompt var Y + answer cardinality mismatch
+    flawed = audit_variable_bindings(
+        "In 1816, X stayed near Lake Geneva and drafted a famous gothic novel. Identify X and Y.",
+        "Mary Shelley",
+    )
+    assert flawed["status"] == "BINDING_MISMATCH"
+    codes = {i["code"] for i in flawed["issues"]}
+    assert "ORPHAN_PROMPT_VAR" in codes
+    assert "ANSWER_CARDINALITY_MISMATCH" in codes
+
+
+
 
 
 

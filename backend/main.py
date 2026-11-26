@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -33,6 +33,8 @@ from backend.visual_linter import lint_visual_clue
 from backend.answer_grader import batch_grade_prelims_answers, expand_entity_aliases
 from backend.stress_tester import run_question_stress_test
 from backend.list_it_engine import verify_list_it_round, LIST_IT_PRESETS
+from backend.pptx_exporter import build_round_pptx_bytes
+from backend.variable_linter import audit_variable_bindings
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
@@ -400,6 +402,26 @@ async def delete_from_quiz_set(item_id: int) -> Dict[str, Any]:
 async def export_set_slides(set_name: str = "KQA Open Finals — Round 1"):
     html_deck = set_manager.export_standalone_html_deck(set_name=set_name)
     return HTMLResponse(content=html_deck)
+
+
+@app.get("/api/sets/export/pptx")
+async def export_set_pptx(set_name: str = "KQA Open Finals — Round 1"):
+    items = set_manager.get_set_questions(set_name=set_name)
+    pptx_bytes = build_round_pptx_bytes(set_name=set_name, questions=items)
+    safe_slug = "".join(c if c.isalnum() else "-" for c in set_name.lower()).strip("-") or "round"
+    return Response(
+        content=pptx_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        headers={"Content-Disposition": f'attachment; filename="{safe_slug}-deck.pptx"'},
+    )
+
+
+@app.post("/api/lint-variables")
+async def lint_variables_endpoint(payload: Dict[str, Any]) -> Dict[str, Any]:
+    return audit_variable_bindings(
+        question_text=str(payload.get("question_text", "")),
+        target_answer=str(payload.get("target_answer", "")),
+    )
 
 
 @app.get("/api/sets/export/prelims", response_class=HTMLResponse)

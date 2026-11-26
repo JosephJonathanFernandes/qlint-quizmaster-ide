@@ -469,6 +469,25 @@ function renderDiagnosticReport(diag, rawQuestion) {
   // Render Module 4: Disentangled Archive Deduplication
   renderArchiveDeduplication(diag.archive_dedup);
 
+  // Update Static Variable Binding Pill
+  const varPill = document.getElementById("var-binding-pill");
+  const varLint = diag.style_critique?.variable_lint;
+  if (varPill && varLint) {
+    if (varLint.status === "CLEAN_BINDING") {
+      const vList = (varLint.prompt_vars?.length ? varLint.prompt_vars : varLint.clue_vars) || [];
+      varPill.textContent = vList.length ? `✓ Vars: ${vList.join(",")} Bound` : "✓ Vars: Direct";
+      varPill.title = "All placeholder variables match between clues, prompt, and answer key.";
+      varPill.className =
+        "text-[10px] font-mono-code px-1.5 py-0.5 rounded bg-emerald-950/60 text-emerald-300 border border-emerald-700/40";
+    } else {
+      const msg = (varLint.issues || []).map((i) => i.message).join(" ");
+      varPill.textContent = `⚠ ${varLint.issues?.[0]?.code || "Var Mismatch"}`;
+      varPill.title = msg;
+      varPill.className =
+        "text-[10px] font-mono-code px-1.5 py-0.5 rounded bg-rose-950/70 text-rose-300 border border-rose-500/60 cursor-help";
+    }
+  }
+
   // Record Draft Calibration Snapshot
   recordVersionSnapshot(rawQuestion, diag);
 }
@@ -1720,8 +1739,10 @@ async function loadRoundSet() {
   const enc = encodeURIComponent(CURRENT_ROUND_NAME);
   const prelimsLink = document.getElementById("link-export-prelims");
   const slidesLink = document.getElementById("link-export-slides");
+  const pptxLink = document.getElementById("link-export-pptx");
   if (prelimsLink) prelimsLink.href = `/api/sets/export/prelims?set_name=${enc}`;
   if (slidesLink) slidesLink.href = `/api/sets/export/slides?set_name=${enc}`;
+  if (pptxLink) pptxLink.href = `/api/sets/export/pptx?set_name=${enc}`;
 
   try {
     const res = await fetch(`/api/sets?set_name=${enc}`);

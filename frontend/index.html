@@ -166,6 +166,7 @@
                 <label class="text-xs font-semibold text-slate-200 flex items-center gap-2">
                   <span>Draft Question Prompt</span>
                   <span class="text-[10px] font-mono-code px-1.5 py-0.5 rounded bg-slate-800 text-cyan-300" id="clue-count-pill">3 clues</span>
+                  <span class="text-[10px] font-mono-code px-1.5 py-0.5 rounded bg-indigo-950/70 text-indigo-300 border border-indigo-700/40" id="var-binding-pill">Vars: OK</span>
                 </label>
                 <div class="flex items-center gap-2">
                   <span id="oral-cadence-badge" class="text-[10px] font-mono-code px-1.5 py-0.5 rounded bg-emerald-950/60 text-emerald-300 border border-emerald-700/40">Breath-Safe</span>
@@ -706,7 +707,10 @@
               📄 Audit (.md)
             </button>
             <a id="link-export-prelims" href="/api/sets/export/prelims" target="_blank" class="px-3.5 py-2.5 rounded-xl bg-purple-950/70 hover:bg-purple-900/80 text-purple-200 border border-purple-700/50 text-xs font-bold transition flex items-center gap-1.5">
-              <span>🖨</span><span>Printable Prelims PDF ↗</span>
+              <span>🖨</span><span>Prelims PDF ↗</span>
+            </a>
+            <a id="link-export-pptx" href="/api/sets/export/pptx" class="px-3.5 py-2.5 rounded-xl bg-orange-950/70 hover:bg-orange-900/80 text-orange-200 border border-orange-700/50 text-xs font-bold transition flex items-center gap-1.5">
+              <span>📊</span><span>Export .PPTX</span>
             </a>
             <button onclick="togglePrelimsGrader()" class="px-3.5 py-2.5 rounded-xl bg-cyan-950/70 hover:bg-cyan-900/80 text-cyan-200 border border-cyan-700/50 text-xs font-bold transition">
               📝 Fuzzy Sheet Grader
