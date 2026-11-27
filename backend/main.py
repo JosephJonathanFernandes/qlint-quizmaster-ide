@@ -35,6 +35,7 @@ from backend.stress_tester import run_question_stress_test
 from backend.list_it_engine import verify_list_it_round, LIST_IT_PRESETS
 from backend.pptx_exporter import build_round_pptx_bytes
 from backend.variable_linter import audit_variable_bindings
+from backend.floor_rescue import generate_floor_rescue_hints
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
@@ -421,6 +422,15 @@ async def lint_variables_endpoint(payload: Dict[str, Any]) -> Dict[str, Any]:
     return audit_variable_bindings(
         question_text=str(payload.get("question_text", "")),
         target_answer=str(payload.get("target_answer", "")),
+    )
+
+
+@app.post("/api/floor-rescue")
+async def floor_rescue_endpoint(payload: Dict[str, Any]) -> Dict[str, Any]:
+    return await generate_floor_rescue_hints(
+        question_text=str(payload.get("question_text", "")),
+        target_answer=str(payload.get("target_answer", "")),
+        category=str(payload.get("category", "General")),
     )
 
 

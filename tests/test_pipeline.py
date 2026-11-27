@@ -416,6 +416,31 @@ def test_variable_binding_static_linter():
     assert "ANSWER_CARDINALITY_MISMATCH" in codes
 
 
+def test_floor_rescue_hints_and_cultural_era_diversity():
+    """Verify 3-Rung Floor Rescue Hint Ladder and Cultural/Era Diversity Auditor."""
+    from backend.floor_rescue import generate_floor_rescue_hints, audit_cultural_and_era_diversity
+    from backend.set_manager import set_manager
+
+    rescue = _run(
+        generate_floor_rescue_hints(
+            question_text=PRESET_QUESTIONS[0]["question_text"],
+            target_answer="Mary Shelley",
+            category="Literature",
+        )
+    )
+    assert len(rescue["rungs"]) == 3
+    assert "2 words: [4] [7]" in rescue["answer_pattern"]
+    for rung in rescue["rungs"]:
+        assert "mary shelley" not in rung["hint"].lower()
+
+    set_analysis = set_manager.analyze_set()
+    div = set_analysis["diversity_audit"]
+    assert div["diversity_score"] > 0
+    assert len(div["regions"]) >= 1
+    assert len(div["eras"]) >= 1
+
+
+
 
 
 

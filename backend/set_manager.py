@@ -268,12 +268,15 @@ class QuizSetManager:
         else:
             pacing = f"Needs Calibration: Average quality is {avg_q}/100. Polish lower-scoring questions in the Linter IDE."
 
+        from backend.floor_rescue import audit_cultural_and_era_diversity
+
         return {
             "set_name": set_name,
             "total_questions": len(items),
             "avg_quality_score": avg_q,
             "avg_workability_score": avg_w,
             "category_distribution": cat_counts,
+            "diversity_audit": audit_cultural_and_era_diversity(items),
             "cross_question_spoilers": spoilers,
             "pacing_verdict": pacing,
             "questions": items,

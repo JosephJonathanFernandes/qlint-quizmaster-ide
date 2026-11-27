@@ -1833,6 +1833,8 @@ async function loadRoundSet() {
 
       ${spoilersHtml}
 
+      ${renderDiversityAuditHtml(data.diversity_audit)}
+
       <div class="flex flex-wrap items-center gap-2 mb-4">
         <span class="text-xs font-semibold text-slate-400">Domain Balance:</span>
         ${catChips}
@@ -3263,6 +3265,96 @@ async function runListItVerifier() {
     showToast(`Verified ${data.cardinality}-item List-It round (Par: ${data.recommended_bidding_par})!`, "success");
   } catch (e) {
     out.textContent = "List-It verification failed.";
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+// ============================================================================
+// EMERGENCY FLOOR RESCUE 3-RUNG HINT LADDER & CULTURAL/ERA DIVERSITY AUDIT
+// ============================================================================
+function renderDiversityAuditHtml(audit) {
+  if (!audit) return "";
+  const regChips = Object.entries(audit.regions || {})
+    .map(
+      ([r, c]) =>
+        `<span class="px-2 py-0.5 rounded bg-indigo-950/60 text-indigo-200 border border-indigo-700/40">${escapeHtml(
+          r
+        )}: ${c}</span>`
+    )
+    .join("");
+  const eraChips = Object.entries(audit.eras || {})
+    .map(
+      ([e, c]) =>
+        `<span class="px-2 py-0.5 rounded bg-amber-950/50 text-amber-200 border border-amber-700/40">${escapeHtml(
+          e
+        )}: ${c}</span>`
+    )
+    .join("");
+  return `
+    <div class="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 mb-4 flex flex-col gap-2">
+      <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+        <span class="font-bold text-indigo-300">🌍 Cultural &amp; Temporal Diversity Score: ${
+          audit.diversity_score
+        }/100</span>
+        <span class="text-slate-300 text-[11px]">${escapeHtml(audit.advisory)}</span>
+      </div>
+      <div class="flex flex-wrap items-center gap-1.5 text-[10.5px] font-mono-code">
+        ${regChips}
+        ${eraChips}
+      </div>
+    </div>
+  `;
+}
+
+async function runFloorRescueLadder() {
+  const question_text = (document.getElementById("input-question")?.value || "").trim();
+  const target_answer = (document.getElementById("input-answer")?.value || "").trim();
+  const category = (document.getElementById("input-category")?.value || "General").trim();
+  const panel = document.getElementById("floor-rescue-panel");
+  const btn = document.getElementById("btn-floor-rescue");
+  if (!question_text || !target_answer || !panel) {
+    showToast("Draft a question and target answer first.", "warning");
+    return;
+  }
+
+  panel.classList.remove("hidden");
+  panel.innerHTML = `<div class="text-emerald-300">Generating 3-Rung Emergency Stage Floor-Rescue Hint Ladder...</div>`;
+  if (btn) btn.disabled = true;
+
+  try {
+    const res = await fetch("/api/floor-rescue", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question_text, target_answer, category }),
+    });
+    const data = await res.json();
+
+    const rungsHtml = (data.rungs || [])
+      .map(
+        (r) => `
+        <div class="p-2.5 rounded-lg bg-slate-900/90 border border-emerald-700/40">
+          <div class="text-[10.5px] font-mono-code font-bold text-emerald-300 mb-0.5">${escapeHtml(
+            r.label
+          )}</div>
+          <div class="text-xs text-slate-200">${escapeHtml(r.hint)}</div>
+        </div>
+      `
+      )
+      .join("");
+
+    panel.innerHTML = `
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+        <span class="font-bold text-emerald-300">🛟 Emergency Stage Floor-Rescue Ladder</span>
+        <span class="font-mono-code text-[10.5px] text-cyan-300">${escapeHtml(
+          data.answer_pattern
+        )} • ${escapeHtml(data.engine_used)}</span>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">${rungsHtml}</div>
+    `;
+    showToast("Generated 3-Rung Floor Rescue Hint Ladder!", "success");
+  } catch (e) {
+    panel.textContent = "Failed to generate floor rescue hints.";
   } finally {
     if (btn) btn.disabled = false;
   }

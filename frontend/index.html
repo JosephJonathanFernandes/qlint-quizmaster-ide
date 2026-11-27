@@ -377,7 +377,10 @@
                 </h2>
                 <p class="text-[11px] text-slate-400">Progressive blinded solving across Gemini 2.5 Flash (Veteran) + Groq Llama-3.3-70B (Lateral) + Groq Llama-3.1-8B (Campus)</p>
               </div>
-              <div class="flex items-center gap-2">
+              <div class="flex flex-wrap items-center gap-2">
+                <button id="btn-floor-rescue" onclick="runFloorRescueLadder()" class="px-2.5 py-1 rounded-lg bg-emerald-950/70 hover:bg-emerald-900 text-emerald-200 border border-emerald-700/50 text-[11px] font-semibold transition">
+                  🛟 Floor Rescue Hints
+                </button>
                 <button id="btn-loco-stress" onclick="runLocoStressTest()" class="px-2.5 py-1 rounded-lg bg-purple-950/70 hover:bg-purple-900 text-purple-200 border border-purple-700/50 text-[11px] font-semibold transition">
                   🧪 LOCO Stress Test
                 </button>
@@ -386,6 +389,9 @@
                 </span>
               </div>
             </div>
+
+            <!-- Emergency Stage Floor-Rescue 3-Rung Hint Ladder Panel -->
+            <div id="floor-rescue-panel" class="hidden mb-4 p-3.5 rounded-xl bg-slate-950/90 border border-emerald-500/40 text-xs animate-fade-in"></div>
 
             <!-- Leave-One-Clue-Out (LOCO) & Implicit Linguistic Leak Results Panel -->
             <div id="loco-stress-panel" class="hidden mb-4 p-3.5 rounded-xl bg-slate-950/90 border border-purple-500/40 text-xs animate-fade-in"></div>
